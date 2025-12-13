@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/navigation/app_router.dart';
 import '../../../core/widgets/tv_focusable.dart';
-import '../../../core/widgets/channel_card.dart';
 import '../../../core/platform/platform_detector.dart';
 import '../providers/favorites_provider.dart';
 
@@ -126,7 +125,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   
   Widget _buildFavoritesList(FavoritesProvider provider) {
     final size = MediaQuery.of(context).size;
-    final crossAxisCount = PlatformDetector.getGridCrossAxisCount(size.width);
     
     return ReorderableListView.builder(
       padding: const EdgeInsets.all(20),

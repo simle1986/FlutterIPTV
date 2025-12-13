@@ -194,7 +194,7 @@ class TVFocusTraversalGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FocusTraversalGroup(
-      policy: policy ?? const ReadingOrderTraversalPolicy(),
+      policy: policy ?? ReadingOrderTraversalPolicy(),
       child: child,
     );
   }

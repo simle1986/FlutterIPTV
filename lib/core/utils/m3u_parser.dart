@@ -132,7 +132,7 @@ class M3UParser {
     final Map<String, String> attributes = {};
     
     // Regular expression to match key="value" or key=value patterns
-    final RegExp attrRegex = RegExp(r'(\S+?)=["\']?([^"\']+)["\']?(?:\s|$)');
+    final RegExp attrRegex = RegExp(r'(\S+?)=["\u0027]?([^"\u0027]+)["\u0027]?(?:\s|$)');
     
     for (final match in attrRegex.allMatches(content)) {
       if (match.groupCount >= 2) {
