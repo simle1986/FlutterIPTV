@@ -10,26 +10,33 @@ class ServiceLocator {
   static late SharedPreferences _prefs;
   static late DatabaseHelper _database;
   static late Directory _appDir;
-  
+
   static SharedPreferences get prefs => _prefs;
   static DatabaseHelper get database => _database;
   static Directory get appDir => _appDir;
-  
-  static Future<void> init() async {
-    // Initialize SharedPreferences
+
+  static Future<void> initPrefs() async {
+    // Initialize SharedPreferences - Fast and critical for theme
     _prefs = await SharedPreferences.getInstance();
-    
-    // Initialize app directory
-    _appDir = await getApplicationDocumentsDirectory();
-    
-    // Initialize database
-    _database = DatabaseHelper();
-    await _database.initialize();
-    
+
     // Detect platform
     PlatformDetector.init();
   }
-  
+
+  static Future<void> initDatabase() async {
+    // Initialize app directory
+    _appDir = await getApplicationDocumentsDirectory();
+
+    // Initialize database
+    _database = DatabaseHelper();
+    await _database.initialize();
+  }
+
+  static Future<void> init() async {
+    await initPrefs();
+    await initDatabase();
+  }
+
   static Future<void> dispose() async {
     await _database.close();
   }

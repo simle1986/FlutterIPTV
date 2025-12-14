@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
@@ -7,13 +8,19 @@ class DatabaseHelper {
   static Database? _database;
   static const String _databaseName = 'flutter_iptv.db';
   static const int _databaseVersion = 1;
-  
+
   Future<void> initialize() async {
     if (_database != null) return;
-    
+
+    // Initialize FFI for desktop platforms
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
     final Directory appDir = await getApplicationDocumentsDirectory();
     final String path = join(appDir.path, _databaseName);
-    
+
     _database = await openDatabase(
       path,
       version: _databaseVersion,
@@ -21,7 +28,7 @@ class DatabaseHelper {
       onUpgrade: _onUpgrade,
     );
   }
-  
+
   Future<void> _onCreate(Database db, int version) async {
     // Playlists table
     await db.execute('''
@@ -35,7 +42,7 @@ class DatabaseHelper {
         created_at INTEGER NOT NULL
       )
     ''');
-    
+
     // Channels table
     await db.execute('''
       CREATE TABLE channels (
@@ -51,7 +58,7 @@ class DatabaseHelper {
         FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE
       )
     ''');
-    
+
     // Favorites table
     await db.execute('''
       CREATE TABLE favorites (
@@ -62,7 +69,7 @@ class DatabaseHelper {
         FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
       )
     ''');
-    
+
     // Watch history table
     await db.execute('''
       CREATE TABLE watch_history (
@@ -73,7 +80,7 @@ class DatabaseHelper {
         FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
       )
     ''');
-    
+
     // EPG data table
     await db.execute('''
       CREATE TABLE epg_data (
@@ -87,37 +94,42 @@ class DatabaseHelper {
         created_at INTEGER NOT NULL
       )
     ''');
-    
+
     // Create indexes for better performance
-    await db.execute('CREATE INDEX idx_channels_playlist ON channels(playlist_id)');
+    await db
+        .execute('CREATE INDEX idx_channels_playlist ON channels(playlist_id)');
     await db.execute('CREATE INDEX idx_channels_group ON channels(group_name)');
-    await db.execute('CREATE INDEX idx_favorites_channel ON favorites(channel_id)');
-    await db.execute('CREATE INDEX idx_history_channel ON watch_history(channel_id)');
-    await db.execute('CREATE INDEX idx_epg_channel ON epg_data(channel_epg_id)');
-    await db.execute('CREATE INDEX idx_epg_time ON epg_data(start_time, end_time)');
+    await db
+        .execute('CREATE INDEX idx_favorites_channel ON favorites(channel_id)');
+    await db.execute(
+        'CREATE INDEX idx_history_channel ON watch_history(channel_id)');
+    await db
+        .execute('CREATE INDEX idx_epg_channel ON epg_data(channel_epg_id)');
+    await db
+        .execute('CREATE INDEX idx_epg_time ON epg_data(start_time, end_time)');
   }
-  
+
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // Handle future migrations here
   }
-  
+
   Database get db {
     if (_database == null) {
       throw StateError('Database not initialized. Call initialize() first.');
     }
     return _database!;
   }
-  
+
   Future<void> close() async {
     await _database?.close();
     _database = null;
   }
-  
+
   // Generic CRUD operations
   Future<int> insert(String table, Map<String, dynamic> data) async {
     return await db.insert(table, data);
   }
-  
+
   Future<List<Map<String, dynamic>>> query(
     String table, {
     String? where,
@@ -135,7 +147,7 @@ class DatabaseHelper {
       offset: offset,
     );
   }
-  
+
   Future<int> update(
     String table,
     Map<String, dynamic> data, {
@@ -144,7 +156,7 @@ class DatabaseHelper {
   }) async {
     return await db.update(table, data, where: where, whereArgs: whereArgs);
   }
-  
+
   Future<int> delete(
     String table, {
     String? where,
@@ -152,8 +164,9 @@ class DatabaseHelper {
   }) async {
     return await db.delete(table, where: where, whereArgs: whereArgs);
   }
-  
-  Future<List<Map<String, dynamic>>> rawQuery(String sql, [List<Object?>? arguments]) async {
+
+  Future<List<Map<String, dynamic>>> rawQuery(String sql,
+      [List<Object?>? arguments]) async {
     return await db.rawQuery(sql, arguments);
   }
 }

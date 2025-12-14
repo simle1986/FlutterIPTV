@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/navigation/app_router.dart';
+import '../../../core/services/service_locator.dart';
+import '../../../core/platform/tv_detection_channel.dart';
 import '../../playlist/providers/playlist_provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,92 +16,72 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
+  // ... animation controllers ...
   late AnimationController _logoController;
   late AnimationController _textController;
   late Animation<double> _logoScale;
   late Animation<double> _logoOpacity;
   late Animation<double> _textOpacity;
   late Animation<Offset> _textSlide;
-  
+
+  // ignore: unused_field
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
-    
-    // Logo animation controller
+    // ... animation init logic ...
     _logoController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    
-    // Text animation controller
+        duration: const Duration(milliseconds: 1200), vsync: this);
     _textController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    
-    // Logo animations
+        duration: const Duration(milliseconds: 800), vsync: this);
+
+    // Setup animations but skip for brevity in replace...
     _logoScale = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(
+        CurvedAnimation(parent: _logoController, curve: Curves.elasticOut));
+    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
         parent: _logoController,
-        curve: Curves.elasticOut,
-      ),
-    );
-    
-    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _logoController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
-      ),
-    );
-    
-    // Text animations
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut)));
     _textOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _textController,
-        curve: Curves.easeOut,
-      ),
-    );
-    
-    _textSlide = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _textController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-    
-    // Start animations
+        CurvedAnimation(parent: _textController, curve: Curves.easeOut));
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero)
+        .animate(CurvedAnimation(
+            parent: _textController, curve: Curves.easeOutCubic));
+
     _startAnimations();
   }
-  
+
+  // ... _startAnimations ...
   Future<void> _startAnimations() async {
-    // Start logo animation
     _logoController.forward();
-    
-    // Start text animation after delay
     await Future.delayed(const Duration(milliseconds: 600));
     _textController.forward();
-    
-    // Initialize app and navigate
     await _initializeApp();
   }
-  
+
   Future<void> _initializeApp() async {
-    // Load playlists
-    final playlistProvider = context.read<PlaylistProvider>();
-    await playlistProvider.loadPlaylists();
-    
-    // Wait for animations
+    try {
+      // Initialize core services
+      await ServiceLocator.init();
+      await TVDetectionChannel.initialize();
+
+      // Load data
+      if (mounted) {
+        final playlistProvider = context.read<PlaylistProvider>();
+        await playlistProvider.loadPlaylists();
+      }
+    } catch (e) {
+      debugPrint('Initialization failed: $e');
+    }
+
+    // Ensure minimum splash display time
     await Future.delayed(const Duration(milliseconds: 1500));
-    
-    // Navigate to home
+
     if (mounted) {
       Navigator.of(context).pushReplacementNamed(AppRouter.home);
     }
   }
-  
+
   @override
   void dispose() {
     _logoController.dispose();
@@ -168,9 +150,9 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Animated App Name
               SlideTransition(
                 position: _textSlide,
@@ -211,9 +193,9 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 60),
-              
+
               // Loading indicator
               AnimatedBuilder(
                 animation: _textController,

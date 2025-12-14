@@ -66,3 +66,7 @@ coverage/
 # Generated files
 *.g.dart
 *.freezed.dart
+
+# Distribution builds
+/dist/
+/release/

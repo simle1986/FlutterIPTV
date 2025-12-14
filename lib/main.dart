@@ -6,7 +6,6 @@ import 'package:media_kit/media_kit.dart';
 import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
 import 'core/services/service_locator.dart';
-import 'core/platform/tv_detection_channel.dart';
 import 'features/channels/providers/channel_provider.dart';
 import 'features/player/providers/player_provider.dart';
 import 'features/playlist/providers/playlist_provider.dart';
@@ -15,23 +14,21 @@ import 'features/settings/providers/settings_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize MediaKit
   MediaKit.ensureInitialized();
-  
-  // Initialize services
-  await ServiceLocator.init();
-  
-  // Initialize TV detection (for Android TV)
-  await TVDetectionChannel.initialize();
-  
+
+  // Initialize critical services (Prefs) immediately for SettingsProvider
+  // Database will be initialized in SplashScreen
+  await ServiceLocator.initPrefs();
+
   // Set preferred orientations for mobile
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  
+
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -41,7 +38,7 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  
+
   runApp(const FlutterIPTVApp());
 }
 
@@ -69,8 +66,10 @@ class FlutterIPTVApp extends StatelessWidget {
             // Use shortcuts for TV remote support
             shortcuts: <ShortcutActivator, Intent>{
               ...WidgetsApp.defaultShortcuts,
-              const SingleActivator(LogicalKeyboardKey.select): const ActivateIntent(),
-              const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
+              const SingleActivator(LogicalKeyboardKey.select):
+                  const ActivateIntent(),
+              const SingleActivator(LogicalKeyboardKey.enter):
+                  const ActivateIntent(),
             },
             onGenerateRoute: AppRouter.generateRoute,
             initialRoute: AppRouter.splash,

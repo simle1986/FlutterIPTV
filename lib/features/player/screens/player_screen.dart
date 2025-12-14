@@ -14,7 +14,7 @@ class PlayerScreen extends StatefulWidget {
   final String channelUrl;
   final String channelName;
   final String? channelLogo;
-  
+
   const PlayerScreen({
     super.key,
     required this.channelUrl,
@@ -30,22 +30,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Timer? _hideControlsTimer;
   bool _showControls = true;
   final FocusNode _playerFocusNode = FocusNode();
-  
+
   @override
   void initState() {
     super.initState();
     _startPlayback();
     _startHideControlsTimer();
-    
+
     // Hide system UI for immersive experience
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
-  
+
   void _startPlayback() {
     final playerProvider = context.read<PlayerProvider>();
     playerProvider.playUrl(widget.channelUrl, name: widget.channelName);
   }
-  
+
   void _startHideControlsTimer() {
     _hideControlsTimer?.cancel();
     _hideControlsTimer = Timer(const Duration(seconds: 4), () {
@@ -54,7 +54,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
     });
   }
-  
+
   void _showControlsTemporarily() {
     setState(() => _showControls = true);
     _startHideControlsTimer();
@@ -64,21 +64,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void dispose() {
     _hideControlsTimer?.cancel();
     _playerFocusNode.dispose();
-    
+
+    // Stop playback when leaving the screen
+    context.read<PlayerProvider>().stop();
+
     // Restore system UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    
+
     super.dispose();
   }
-  
+
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    
+
     _showControlsTemporarily();
-    
+
     final playerProvider = context.read<PlayerProvider>();
     final key = event.logicalKey;
-    
+
     // Play/Pause
     if (key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.enter ||
@@ -86,44 +89,43 @@ class _PlayerScreenState extends State<PlayerScreen> {
       playerProvider.togglePlayPause();
       return KeyEventResult.handled;
     }
-    
+
     // Seek backward
     if (key == LogicalKeyboardKey.arrowLeft) {
       playerProvider.seekBackward(10);
       return KeyEventResult.handled;
     }
-    
+
     // Seek forward
     if (key == LogicalKeyboardKey.arrowRight) {
       playerProvider.seekForward(10);
       return KeyEventResult.handled;
     }
-    
+
     // Volume up
     if (key == LogicalKeyboardKey.arrowUp) {
       playerProvider.setVolume(playerProvider.volume + 0.1);
       return KeyEventResult.handled;
     }
-    
+
     // Volume down
     if (key == LogicalKeyboardKey.arrowDown) {
       playerProvider.setVolume(playerProvider.volume - 0.1);
       return KeyEventResult.handled;
     }
-    
+
     // Back/Exit
-    if (key == LogicalKeyboardKey.escape ||
-        key == LogicalKeyboardKey.goBack) {
+    if (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.goBack) {
       Navigator.of(context).pop();
       return KeyEventResult.handled;
     }
-    
+
     // Mute
     if (key == LogicalKeyboardKey.keyM) {
       playerProvider.toggleMute();
       return KeyEventResult.handled;
     }
-    
+
     return KeyEventResult.ignored;
   }
 
@@ -144,7 +146,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
             children: [
               // Video Player
               _buildVideoPlayer(),
-              
+
               // Controls Overlay
               AnimatedOpacity(
                 opacity: _showControls ? 1.0 : 0.0,
@@ -154,7 +156,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   child: _buildControlsOverlay(),
                 ),
               ),
-              
+
               // Loading Indicator
               Consumer<PlayerProvider>(
                 builder: (context, provider, _) {
@@ -168,12 +170,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   return const SizedBox.shrink();
                 },
               ),
-              
+
               // Error Display
               Consumer<PlayerProvider>(
                 builder: (context, provider, _) {
                   if (provider.hasError) {
-                    return _buildErrorDisplay(provider.error ?? 'Unknown error');
+                    return _buildErrorDisplay(
+                        provider.error ?? 'Unknown error');
                   }
                   return const SizedBox.shrink();
                 },
@@ -184,14 +187,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
     );
   }
-  
+
   Widget _buildVideoPlayer() {
     return Consumer<PlayerProvider>(
       builder: (context, provider, _) {
         if (provider.videoController == null) {
           return const SizedBox.expand();
         }
-        
+
         return Center(
           child: Video(
             controller: provider.videoController!,
@@ -201,7 +204,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       },
     );
   }
-  
+
   Widget _buildControlsOverlay() {
     return Container(
       decoration: BoxDecoration(
@@ -223,9 +226,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
           children: [
             // Top Bar
             _buildTopBar(),
-            
+
             const Spacer(),
-            
+
             // Bottom Controls
             _buildBottomControls(),
           ],
@@ -233,7 +236,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
     );
   }
-  
+
   Widget _buildTopBar() {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -256,9 +259,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ),
             ),
           ),
-          
+
           const SizedBox(width: 16),
-          
+
           // Channel Info
           Expanded(
             child: Column(
@@ -278,7 +281,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   builder: (context, provider, _) {
                     String statusText = 'Loading...';
                     Color statusColor = AppTheme.warningColor;
-                    
+
                     switch (provider.state) {
                       case PlayerState.playing:
                         statusText = 'LIVE';
@@ -299,7 +302,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       default:
                         break;
                     }
-                    
+
                     return Row(
                       children: [
                         Container(
@@ -326,7 +329,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ],
             ),
           ),
-          
+
           // Favorite Button
           Consumer<FavoritesProvider>(
             builder: (context, favProvider, _) {
@@ -355,7 +358,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
     );
   }
-  
+
   Widget _buildBottomControls() {
     return Consumer<PlayerProvider>(
       builder: (context, provider, _) {
@@ -369,9 +372,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 children: [
                   // Volume Control
                   _buildVolumeControl(provider),
-                  
+
                   const SizedBox(width: 32),
-                  
+
                   // Play/Pause Button
                   TVFocusable(
                     autofocus: true,
@@ -400,9 +403,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(width: 32),
-                  
+
                   // Settings
                   TVFocusable(
                     onSelect: () => _showSettingsSheet(context),
@@ -422,9 +425,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Keyboard Shortcuts Hint (for TV/Desktop)
               if (PlatformDetector.useDPadNavigation)
                 Text(
@@ -440,7 +443,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       },
     );
   }
-  
+
   Widget _buildVolumeControl(PlayerProvider provider) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -485,7 +488,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ],
     );
   }
-  
+
   Widget _buildErrorDisplay(String error) {
     return Center(
       child: Container(
@@ -548,7 +551,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
     );
   }
-  
+
   void _showSettingsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -574,7 +577,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Playback Speed
                   const Text(
                     'Playback Speed',
@@ -595,12 +598,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         selectedColor: AppTheme.primaryColor,
                         backgroundColor: AppTheme.cardColor,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : AppTheme.textSecondary,
+                          color: isSelected
+                              ? Colors.white
+                              : AppTheme.textSecondary,
                         ),
                       );
                     }).toList(),
                   ),
-                  
+
                   const SizedBox(height: 24),
                 ],
               ),
