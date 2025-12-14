@@ -51,7 +51,7 @@ jobs:
           Copy-Item -Path "build/windows/x64/runner/Release/*" -Destination "dist/windows/" -Recurse
           
           # Create ZIP archive
-          Compress-Archive -Path "dist/windows/*" -DestinationPath "FlutterIPTV-Windows-x64.zip"
+          Compress-Archive -Path "dist/windows/*" -DestinationPath "flutteriptv-Windows-x64.zip"
         shell: pwsh
       
       - name: Upload Windows Artifact
