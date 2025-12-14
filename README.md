@@ -5,127 +5,79 @@
 </p>
 
 <p align="center">
-  <strong>A Professional IPTV Player Application</strong>
+  <strong>A Professional IPTV Player for Windows, Android, and Android TV</strong>
 </p>
 
 <p align="center">
-  Built with Flutter for Windows, Android Mobile, and Android TV
-</p>
-
-<p align="center">
-  <a href="https://github.com/shnulaa/FlutterIPTV/actions/workflows/ci.yml">
-    <img src="https://github.com/shnulaa/FlutterIPTV/actions/workflows/ci.yml/badge.svg" alt="CI">
-  </a>
   <a href="https://github.com/shnulaa/FlutterIPTV/actions/workflows/build-release.yml">
-    <img src="https://github.com/shnulaa/FlutterIPTV/actions/workflows/build-release.yml/badge.svg" alt="Build and Release">
+    <img src="https://github.com/shnulaa/FlutterIPTV/actions/workflows/build-release.yml/badge.svg" alt="Build Status">
   </a>
-  <a href="https://github.com/shnulaa/FlutterIPTV/releases/latest">
-    <img src="https://img.shields.io/github/v/release/shnulaa/FlutterIPTV?include_prereleases" alt="Release">
-  </a>
-  <a href="https://github.com/shnulaa/FlutterIPTV/releases/latest">
-    <img src="https://img.shields.io/github/downloads/shnulaa/FlutterIPTV/total" alt="Downloads">
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/shnulaa/FlutterIPTV" alt="License">
+  <a href="https://github.com/shnulaa/FlutterIPTV/releases">
+    <img src="https://img.shields.io/github/v/release/shnulaa/FlutterIPTV?include_prereleases" alt="Latest Release">
   </a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/shnulaa/FlutterIPTV/releases/latest">
-    <img src="https://img.shields.io/badge/Download-Windows-blue?style=for-the-badge&logo=windows" alt="Download Windows">
-  </a>
-  <a href="https://github.com/shnulaa/FlutterIPTV/releases/latest">
-    <img src="https://img.shields.io/badge/Download-Android-green?style=for-the-badge&logo=android" alt="Download Android">
-  </a>
-  <a href="https://github.com/shnulaa/FlutterIPTV/releases/latest">
-    <img src="https://img.shields.io/badge/Download-Android%20TV-orange?style=for-the-badge&logo=android" alt="Download Android TV">
-  </a>
-</p>
+FlutterIPTV is a modern, high-performance IPTV player application developed with Flutter. It offers a seamless viewing experience across multiple platforms, with a special focus on usability and aesthetics.
 
----
+## ✨ Features
 
-## �?Features
+- **📺 Cross-Platform Excellence**:
+  - **Windows**: Desktop-optimized UI with keyboard support.
+  - **Android Mobile**: Touch-friendly interface for phones and tablets.
+  - **Android TV**: Fully optimized D-Pad navigation for remote controls.
 
-### 📺 Multi-Platform Support
-- **Windows (PC)** - Full keyboard and mouse support
-- **Android Mobile** - Touch-optimized interface
-- **Android TV** - Complete D-Pad/Remote navigation support
+- **⚡ High-Performance Player**:
+  - Powered by `media_kit` for hardware-accelerated playback.
+  - **Real-time Stats**: Displays video resolution (e.g., 1920x1080) and technical info.
+  - **Fullscreen Mode**: Toggle immersive viewing with a single click.
+  - **Format Support**: Handles HLS (m3u8), MP4, MKV, and more.
 
-### 🎬 Player Features
-- High-quality video playback using media_kit (libmpv)
-- Support for multiple streaming formats:
-  - HLS (M3U8)
-  - DASH
-  - RTMP/RTSP
-  - Direct HTTP streams
-- Hardware-accelerated decoding
-- Adjustable playback speed
-- Volume control with mute toggle
+- **📂 Smart Playlist Management**:
+  - **M3U Support**: Import playlists from local files or URLs.
+  - **Auto-Grouping**: Automatically categorizes channels based on `group-title`.
+  - **Robust Parsing**: Intellegently handles messy URLs and complex M3U tags.
+  - **Local Logos**: Supports displaying channel icons from local storage.
 
-### 📋 Playlist Management
-- Import M3U/M3U8 playlists from URL
-- Import local playlist files
-- Automatic playlist refresh
-- Support for multiple playlists
+- **❤️ User-Friendly Tools**:
+  - **Favorites**: Quickly mark channels as favorites for easy access (toggle directly in player).
+  - **Discovery**: "All Channels" section randomly features 10 channels to help you discover new content.
+  - **Search**: Fast channel searching.
 
-### 🗂�?Channel Organization
-- Automatic grouping by categories
-- Search channels by name or group
-- Favorites with drag-and-drop reordering
-- Watch history tracking
+## 🚀 Installation
 
-### ⚙️ Settings & Customization
-- Playback buffer size configuration
-- Auto-play preferences
-- Parental control with PIN
-- EPG (Electronic Program Guide) support (coming soon)
+Download the latest version from the [Releases Page](https://github.com/shnulaa/FlutterIPTV/releases).
 
-### 🎨 Modern UI/UX
-- Beautiful dark theme optimized for TV viewing
-- Smooth animations and transitions
-- Focus-based navigation for TV remotes
-- Responsive design for all screen sizes
-
----
-
-## 📱 Platform-Specific Features
-
-### Android TV
-- **Full D-Pad Navigation** - Every element is focusable
-- **Leanback Support** - Shows in Android TV launcher
-- **10-foot UI** - Optimized for viewing from a distance
-- **Remote Control Shortcuts**:
-  - Arrow keys: Navigate
-  - Enter/Select: Confirm action
-  - Back: Go back/Exit
-  - Play/Pause: Toggle playback
+### Android / Android TV
+1. Download the `flutter_iptv-android-arm64-vX.X.X.apk` (or universal apk).
+2. Install via ADB or your device's file manager.
 
 ### Windows
-- **Keyboard Shortcuts**:
-  - Space: Play/Pause
-  - Arrow Left/Right: Seek backward/forward
-  - Arrow Up/Down: Volume control
-  - M: Toggle mute
-  - Escape: Exit fullscreen/Go back
-- Resizable window
-- Multi-monitor support
+1. Download `flutter_iptv-windows-vX.X.X.zip`.
+2. Extract the archive.
+3. Run `flutter_iptv.exe`.
 
-### Android Mobile
-- Touch-optimized controls
-- Gesture support for player
-- Double-tap to play/pause
-- Swipe for volume/brightness
+## 🎮 Controls & Shortcuts
 
----
+| Action | Keyboard | TV Remote / D-Pad |
+|--------|----------|-------------------|
+| **Play / Pause** | Space / Enter | Center Button (OK) |
+| **Volume Up** | Arrow Up | D-Pad Up |
+| **Volume Down** | Arrow Down | D-Pad Down |
+| **Seek Forward** | Arrow Right | D-Pad Right |
+| **Seek Backward** | Arrow Left | D-Pad Left |
+| **Mute** | M | - |
+| **Back** | Esc | Back Button |
+| **Fullscreen**| Button in UI | - |
 
-## 🚀 Getting Started
+## 🛠️ Development
 
 ### Prerequisites
-- Flutter SDK 3.0.0 or higher
-- For Windows: Visual Studio 2022 with C++ desktop development
-- For Android: Android Studio with Kotlin support
+- Flutter SDK (>=3.0.0)
+- Dart SDK
+- Visual Studio (for Windows build)
+- Android Studio / SDK (for Android build)
 
-### Installation
+### Build Steps
 
 1. **Clone the repository**
    ```bash
@@ -138,98 +90,32 @@
    flutter pub get
    ```
 
-3. **Run on your device**
+3. **Run locally**
    ```bash
-   # For Windows
    flutter run -d windows
-   
-   # For Android (Mobile or TV)
-   flutter run -d <device_id>
-   
-   # List available devices
-   flutter devices
+   # or
+   flutter run -d android
    ```
 
-### Building for Release
-
-```bash
-# Windows
-flutter build windows --release
-
-# Android APK
-flutter build apk --release
-
-# Android App Bundle
-flutter build appbundle --release
-```
-
----
-
-## 📁 Project Structure
-
-```
-lib/
-├── main.dart                    # App entry point
-├── core/
-�?  ├── database/               # SQLite database helper
-�?  ├── models/                 # Data models
-�?  ├── navigation/             # App router
-�?  ├── platform/               # Platform detection
-�?  ├── services/               # Service locator
-�?  ├── theme/                  # App theme
-�?  ├── utils/                  # Utilities (M3U parser, etc.)
-�?  └── widgets/                # Reusable widgets
-└── features/
-    ├── channels/               # Channels listing
-    ├── epg/                    # Electronic Program Guide
-    ├── favorites/              # Favorites management
-    ├── home/                   # Home screen
-    ├── player/                 # Video player
-    ├── playlist/               # Playlist management
-    ├── search/                 # Search functionality
-    ├── settings/               # App settings
-    └── splash/                 # Splash screen
-```
-
----
-
-## 🔧 Configuration
-
-### Adding a Playlist
-1. Open the app
-2. Go to Playlist Manager (+ icon on home screen)
-3. Enter a name and M3U URL
-4. Click "Add from URL"
-
-### EPG Configuration
-1. Go to Settings
-2. Enable EPG
-3. Enter your EPG XMLTV URL
-4. The app will automatically match channels
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
+4. **Build Release**
+   ```bash
+   flutter build windows
+   flutter build apk --split-per-abi
+   ```
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
----
+## 📄 License
 
-## 📞 Support
-
-If you have any questions or run into issues, please open an issue on GitHub.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
