@@ -5,6 +5,17 @@ All notable changes to FlutterIPTV will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.15] - 2024-12-14
+
+### Added
+- Added video resolution display in player status bar
+- Added fullscreen toggle button in player controls
+- Added favorite toggle button in player top bar
+
+### Changed
+- Removed limit on Home screen categories (shows all now)
+- Changed Home screen "All Channels" section to show 10 random channels
+
 ## [1.0.13] - 2024-12-14
 
 ### Fixed

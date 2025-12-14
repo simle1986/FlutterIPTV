@@ -343,6 +343,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     );
                   },
                 ),
+                // Video Info
+                Consumer<PlayerProvider>(
+                  builder: (context, provider, _) {
+                    if (provider.videoInfo.isEmpty)
+                      return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        provider.videoInfo,
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.5), fontSize: 10),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),

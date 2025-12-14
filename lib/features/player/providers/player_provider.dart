@@ -47,6 +47,18 @@ class PlayerProvider extends ChangeNotifier {
       _state == PlayerState.loading || _state == PlayerState.buffering;
   bool get hasError => _state == PlayerState.error;
 
+  String get videoInfo {
+    if (_player == null) return '';
+
+    // Access state safely
+    final w = _player!.state.width;
+    final h = _player!.state.height;
+
+    if (w == 0 || h == 0) return '';
+
+    return '$w x $h';
+  }
+
   double get progress {
     if (_duration.inMilliseconds == 0) return 0;
     return _position.inMilliseconds / _duration.inMilliseconds;
@@ -112,6 +124,10 @@ class PlayerProvider extends ChangeNotifier {
         notifyListeners();
       }
     });
+
+    // Listen to video dimensions
+    _player!.stream.width.listen((_) => notifyListeners());
+    _player!.stream.height.listen((_) => notifyListeners());
   }
 
   // Play a channel
