@@ -131,7 +131,7 @@ jobs:
           # Create NSIS script
           $nsisScript = @"
           !define APPNAME "FlutterIPTV"
-          !define VERSION "1.1.15"
+          !define VERSION "1.1.16"
           !define PUBLISHER "FlutterIPTV"
           !define URL "https://github.com/shnulaa/FlutterIPTV"
           !define EXECUTABLE "flutter_iptv.exe"
@@ -148,8 +148,9 @@ jobs:
           
           # Interface Settings
           !define MUI_ABORTWARNING
-          !define MUI_ICON "assets\\icons\\app_icon.ico"
-          !define MUI_UNICON "assets\\icons\\app_icon.ico"
+          # 注释掉图标引用，因为项目中没有.ico文件
+          # !define MUI_ICON "assets\\icons\\app_icon.ico"
+          # !define MUI_UNICON "assets\\icons\\app_icon.ico"
           
           # Pages
           !insertmacro MUI_PAGE_WELCOME

@@ -78,3 +78,21 @@ android {
 flutter {
     source = "../.."
 }
+
+// 自动为所有Flutter插件配置命名空间
+subprojects {
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            android {
+                if (!project.android.hasProperty('namespace') || project.android.namespace == null) {
+                    if (project.name.contains('install_plugin')) {
+                        namespace = "com.flutteriptv.install_plugin"
+                    } else {
+                        // 为其他插件提供默认命名空间
+                        namespace = "com.flutteriptv.${project.name.replaceAll('-', '_')}"
+                    }
+                }
+            }
+        }
+    }
+}
