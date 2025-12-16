@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/app_update.dart';
 import '../services/update_service.dart';
 import '../widgets/update_dialog.dart';
+import '../widgets/download_progress_dialog.dart';
 
 class UpdateManager {
   static final UpdateManager _instance = UpdateManager._internal();
@@ -95,11 +98,14 @@ class UpdateManager {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => UpdateDialog(
+      builder: (dialogContext) => UpdateDialog(
         update: update,
-        onUpdate: () => _handleUpdate(context, update),
+        onUpdate: () {
+          Navigator.of(dialogContext).pop();
+          _handleUpdate(dialogContext, update);
+        },
         onCancel: () {
-          Navigator.of(context).pop();
+          Navigator.of(dialogContext).pop();
           debugPrint('UPDATE_MANAGER: 用户选择稍后更新');
         },
       ),
@@ -110,11 +116,6 @@ class UpdateManager {
   Future<void> _handleUpdate(BuildContext context, AppUpdate update) async {
     try {
       debugPrint('UPDATE_MANAGER: 用户选择立即更新');
-
-      // 关闭更新对话框
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
 
       // 获取下载URL
       debugPrint('UPDATE_MANAGER: 正在获取下载URL...');
@@ -131,53 +132,60 @@ class UpdateManager {
         return;
       }
 
-      // 检查是否是GitHub页面URL（当API受限时返回的备用方案）
-      if (downloadUrl.contains('github.com') && !downloadUrl.contains('.exe')) {
-        debugPrint('UPDATE_MANAGER: 检测到GitHub页面URL，需要手动下载');
-        _showManualDownloadDialog(context, downloadUrl);
-        return;
-      }
-
       // 显示下载进度对话框并开始下载
       debugPrint('UPDATE_MANAGER: 开始下载更新文件...');
-      final downloadedFile = await showDialog<String>(
+      
+      // 在调用showDialog前检查context是否仍然有效
+      if (!context.mounted) {
+        debugPrint('UPDATE_MANAGER: Context已失效，直接下载更新文件');
+        // 即使context失效，也尝试直接下载更新文件
+        await _downloadAndUpdateDirectly(downloadUrl);
+        return;
+      }
+      
+      // 显示下载进度对话框
+      showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) {
-          double progress = 0.0;
-          String status = '准备下载...';
-          
-          // 开始下载
-          Future.delayed(const Duration(milliseconds: 100), () async {
-            try {
-              final file = await _updateService.downloadUpdate(
-                downloadUrl,
-                onProgress: (p) {
-                  if (context.mounted) {
-                    (context as Element).markNeedsBuild();
-                    progress = p;
-                  }
-                },
-                onStatusChange: (s) {
-                  if (context.mounted) {
-                    (context as Element).markNeedsBuild();
-                    status = s;
-                  }
-                },
-              );
-              
-              if (file != null && context.mounted) {
-                Navigator.of(context).pop(file);
-              }
-            } catch (e) {
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
-            }
-          });
-          
+        builder: (dialogContext) {
           return StatefulBuilder(
-            builder: (context, setState) {
+            builder: (dialogContext, setState) {
+              double progress = 0.0;
+              String status = '准备下载...';
+              
+              // 开始下载
+              Future.delayed(const Duration(milliseconds: 100), () async {
+                try {
+                  final file = await _updateService.downloadUpdate(
+                    downloadUrl,
+                    onProgress: (p) {
+                      if (dialogContext.mounted) {
+                        setState(() {
+                          progress = p;
+                          status = '下载中... ${(progress * 100).toStringAsFixed(1)}%';
+                        });
+                      }
+                    },
+                    onStatusChange: (s) {
+                      if (dialogContext.mounted) {
+                        setState(() {
+                          status = s;
+                        });
+                      }
+                    },
+                  );
+                  
+                  if (file != null && dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop(file);
+                  }
+                } catch (e) {
+                  debugPrint('UPDATE_MANAGER: 下载失败: $e');
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop();
+                  }
+                }
+              });
+              
               return Dialog(
                 backgroundColor: const Color(0xFF1E1E2E),
                 shape: RoundedRectangleBorder(
@@ -284,48 +292,34 @@ class UpdateManager {
             },
           );
         },
-      );
-
-      if (downloadedFile != null && context.mounted) {
-        debugPrint('UPDATE_MANAGER: 下载完成，开始安装: $downloadedFile');
-        
-        // 询问用户是否立即安装
-        final shouldInstall = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('下载完成'),
-            content: const Text('更新文件已下载完成，是否立即安装？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('稍后安装'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                ),
-                child: const Text(
-                  '立即安装',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        );
-
-        if (shouldInstall == true) {
+      ).then((downloadedFile) async {
+        // 使用.then来处理对话框关闭后的逻辑，避免await导致的context失效问题
+        if (downloadedFile != null && context.mounted) {
+          debugPrint('UPDATE_MANAGER: 下载完成，开始自动安装: $downloadedFile');
+          
+          // 显示安装提示并自动安装
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('下载完成，正在启动安装程序...'),
+              backgroundColor: Colors.blue,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          
+          // 自动启动安装
           final installSuccess = await _updateService.installUpdate(downloadedFile);
+          
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(installSuccess ? '安装程序已启动' : '安装失败'),
+                content: Text(installSuccess ? '安装程序已启动，请按照提示完成更新' : '安装失败，请手动下载安装'),
                 backgroundColor: installSuccess ? Colors.green : Colors.red,
+                duration: const Duration(seconds: 5),
               ),
             );
           }
         }
-      }
+      });
     } catch (e) {
       debugPrint('UPDATE_MANAGER: 处理更新时发生错误: $e');
       if (context.mounted) {
@@ -339,64 +333,39 @@ class UpdateManager {
     }
   }
 
-  /// 显示手动下载对话框
-  void _showManualDownloadDialog(BuildContext context, String downloadUrl) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('API受限，需要手动下载'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '由于GitHub API请求频率限制，无法直接下载更新。请手动下载并安装最新版本：',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              '1. 点击下方按钮打开下载页面\n'
-              '2. 下载最新的安装包\n'
-              '3. 运行安装程序完成更新',
-              style: TextStyle(fontSize: 14, height: 1.5),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _openDownloadPage(downloadUrl);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-            ),
-            child: const Text(
-              '打开下载页面',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  /// 打开下载页面
-  Future<void> _openDownloadPage(String url) async {
+  /// 直接下载并安装更新（不依赖context）
+  Future<void> _downloadAndUpdateDirectly(String downloadUrl) async {
     try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        debugPrint('UPDATE_MANAGER: 已打开下载页面: $url');
+      debugPrint('UPDATE_MANAGER: 开始直接下载更新: $downloadUrl');
+      
+      // 下载文件
+      final filePath = await _updateService.downloadUpdate(
+        downloadUrl,
+        onProgress: (progress) {
+          debugPrint('UPDATE_MANAGER: 下载进度: ${(progress * 100).toStringAsFixed(1)}%');
+        },
+        onStatusChange: (status) {
+          debugPrint('UPDATE_MANAGER: 下载状态: $status');
+        },
+      );
+      
+      if (filePath != null) {
+        debugPrint('UPDATE_MANAGER: 下载完成，文件路径: $filePath');
+        debugPrint('UPDATE_MANAGER: 开始安装更新...');
+        
+        // 安装更新（直接使用文件路径）
+        final installSuccess = await _updateService.installUpdate(filePath);
+        if (installSuccess) {
+          debugPrint('UPDATE_MANAGER: 安装程序已启动');
+        } else {
+          debugPrint('UPDATE_MANAGER: 安装失败，请手动安装');
+        }
       } else {
-        debugPrint('UPDATE_MANAGER: 无法打开URL: $url');
+        debugPrint('UPDATE_MANAGER: 下载失败');
       }
     } catch (e) {
-      debugPrint('UPDATE_MANAGER: 打开下载页面失败: $e');
+      debugPrint('UPDATE_MANAGER: 直接下载更新失败: $e');
     }
   }
 

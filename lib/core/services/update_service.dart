@@ -10,163 +10,92 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_update.dart';
 import '../services/service_locator.dart';
-
-/// GitHub API速率限制异常
-class RateLimitException implements Exception {
-  final String message;
-  RateLimitException(this.message);
-  
-  @override
-  String toString() => 'RateLimitException: $message';
-}
+import '../config/github_config.dart';
 
 class UpdateService {
   static const String _githubRepoUrl =
       'https://api.github.com/repos/shnulaa/FlutterIPTV/releases';
-  static const String _githubTagsUrl =
-      'https://api.github.com/repos/shnulaa/FlutterIPTV/tags';
   static const String _githubReleasesUrl =
       'https://github.com/shnulaa/FlutterIPTV/releases';
-  
-  // 备用API端点（使用GitHub Pages作为缓存）
-  static const String _fallbackApiUrl =
-      'https://api.github.com/repos/shnulaa/FlutterIPTV/releases/latest';
 
   // 检查更新的间隔时间（小时）
   static const int _checkUpdateInterval = 24;
 
-  // SharedPreferences key for last update check
-  // 注释掉未使用的常量
-  // static const String _lastUpdateCheckKey = 'last_update_check';
-
   // 缓存相关
   static const String _cacheKey = 'github_api_cache';
   static const Duration _cacheExpiry = Duration(hours: 1);
-  static const int _maxRetries = 3;
-  static const Duration _baseRetryDelay = Duration(seconds: 1);
+  
+  // 下载锁，防止并发下载
+  static bool _isDownloading = false;
 
   /// 检查是否有可用更新
   Future<AppUpdate?> checkForUpdates({bool forceCheck = false}) async {
     try {
       debugPrint('UPDATE: 开始检查更新...');
-
-      // 检查是否需要检查更新（除非强制检查）
+      
+      // 如果不是强制检查，检查是否需要跳过
       if (!forceCheck) {
-        final lastCheck = await _getLastUpdateCheckTime();
+        final lastCheckTime = await _getLastCheckTime();
         final now = DateTime.now();
-        if (lastCheck != null &&
-            now.difference(lastCheck).inHours < _checkUpdateInterval) {
-          debugPrint('UPDATE: 距离上次检查不足24小时，跳过本次检查');
+        if (lastCheckTime != null && 
+            now.difference(lastCheckTime).inHours < _checkUpdateInterval) {
+          debugPrint('UPDATE: 距离上次检查不足 $_checkUpdateInterval 小时，跳过检查');
           return null;
         }
       }
 
-      // 获取当前应用版本
-      final currentVersion = await getCurrentVersion();
-      debugPrint('UPDATE: 当前应用版本: $currentVersion');
+      // 保存本次检查时间
+      await _saveCheckTime(DateTime.now());
 
-      // 获取最新发布信息
-      final latestRelease = await _fetchLatestRelease();
-      if (latestRelease == null) {
-        debugPrint('UPDATE: 无法获取最新发布信息');
-        return null;
+      // 首先尝试从缓存获取
+      if (!forceCheck) {
+        final cachedRelease = await _getCachedRelease();
+        if (cachedRelease != null) {
+          debugPrint('UPDATE: 使用缓存数据');
+          return cachedRelease;
+        }
       }
 
-      debugPrint('UPDATE: 最新发布版本: ${latestRelease.version}');
-
-      // 比较版本号
-      if (_isNewerVersion(latestRelease.version, currentVersion)) {
-        debugPrint('UPDATE: 发现新版本可用！');
-        await _saveLastUpdateCheckTime();
-        return latestRelease;
-      } else {
-        debugPrint('UPDATE: 已是最新版本');
-        await _saveLastUpdateCheckTime();
-        return null;
+      // 尝试从GitHub API获取（使用Token认证）
+      final release = await _fetchFromGitHubApi();
+      
+      if (release != null) {
+        // 缓存结果
+        await _cacheRelease(release);
+        return release;
       }
+
+      debugPrint('UPDATE: 无法获取最新发布信息');
+      return null;
     } catch (e) {
       debugPrint('UPDATE: 检查更新时发生错误: $e');
       return null;
     }
   }
 
-  /// 获取当前应用版本
-  Future<String> getCurrentVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      return packageInfo.version;
-    } catch (e) {
-      debugPrint('UPDATE: 获取当前版本失败: $e');
-      return '0.0.0';
-    }
-  }
-
-  /// 获取最新发布信息
-  Future<AppUpdate?> _fetchLatestRelease() async {
-    // 首先检查缓存
-    final cachedRelease = await _getCachedRelease();
-    if (cachedRelease != null) {
-      debugPrint('UPDATE: 使用缓存的发布信息');
-      return cachedRelease;
-    }
-
-    // 尝试从GitHub API获取，带重试机制
-    AppUpdate? release = await _fetchFromGitHubWithRetry();
-
-    // 如果GitHub API失败，尝试备用API
-    if (release == null) {
-      debugPrint('UPDATE: GitHub API失败，尝试备用API...');
-      release = await _fetchFromFallbackApi();
-    }
-
-    // 缓存成功获取的结果
-    if (release != null) {
-      await _cacheRelease(release);
-    }
-
-    return release;
-  }
-
-  /// 带重试机制的GitHub API请求
-  Future<AppUpdate?> _fetchFromGitHubWithRetry() async {
-    for (int attempt = 1; attempt <= _maxRetries; attempt++) {
-      try {
-        debugPrint('UPDATE: GitHub API请求尝试 $attempt/$_maxRetries');
-        
-        // 添加请求间的延迟
-        if (attempt > 1) {
-          final delay = _baseRetryDelay * (1 << (attempt - 1)); // 指数退避
-          debugPrint('UPDATE: 等待 ${delay.inSeconds} 秒后重试...');
-          await Future.delayed(delay);
-        }
-
-        final release = await _fetchFromGitHubApi();
-        if (release != null) {
-          debugPrint('UPDATE: GitHub API请求成功');
-          return release;
-        }
-      } catch (e) {
-        debugPrint('UPDATE: GitHub API请求尝试 $attempt 失败: $e');
-        
-        if (attempt == _maxRetries) {
-          debugPrint('UPDATE: GitHub API所有重试都失败了');
-        }
-      }
-    }
-    return null;
-  }
-
   /// 从GitHub API获取发布信息
   Future<AppUpdate?> _fetchFromGitHubApi() async {
-    // 首先尝试从GitHub Releases获取
     try {
+      // 获取GitHub Token
+      final token = await _getGitHubToken();
+      
+      // 构建请求头
+      final headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'FlutterIPTV-App/1.1.1',
+      };
+      
+      // 如果有Token，添加到请求头
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'token $token';
+        debugPrint('UPDATE: 使用GitHub Token进行认证');
+      } else {
+        debugPrint('UPDATE: 未找到GitHub Token，使用未认证请求');
+      }
+
       final response = await http.get(
         Uri.parse(_githubRepoUrl),
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'FlutterIPTV-App/1.1.1',
-          'If-None-Match': '"W/\\"${DateTime.now().millisecondsSinceEpoch}\\""', // 简单的缓存控制
-        },
+        headers: headers,
       ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
@@ -183,109 +112,298 @@ class UpdateService {
           debugPrint('UPDATE: 找到预发布版本，使用第一个发布');
           return AppUpdate.fromJson(releases.first);
         }
-      } else if (response.statusCode == 403) {
-        final rateLimitRemaining = response.headers['x-ratelimit-remaining'];
-        final rateLimitReset = response.headers['x-ratelimit-reset'];
-        debugPrint('UPDATE: GitHub API限制 (403)');
-        debugPrint('UPDATE: 剩余请求次数: $rateLimitRemaining');
-        debugPrint('UPDATE: 重置时间: $rateLimitReset');
-        
-        // 如果是速率限制，抛出特殊异常
-        throw RateLimitException('GitHub API rate limit exceeded');
-      } else if (response.statusCode == 304) {
-        debugPrint('UPDATE: GitHub API返回304 (未修改)，使用缓存');
-        return await _getCachedRelease();
       } else {
         debugPrint('UPDATE: GitHub API请求失败，状态码: ${response.statusCode}');
+        debugPrint('UPDATE: 响应内容: ${response.body}');
       }
     } catch (e) {
-      if (e is RateLimitException) {
-        rethrow;
-      }
       debugPrint('UPDATE: 获取发布信息时发生错误: $e');
-    }
-
-    // 如果GitHub Releases失败，尝试从Git Tags获取
-    try {
-      final response = await http.get(
-        Uri.parse(_githubTagsUrl),
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'FlutterIPTV-App/1.1.1',
-        },
-      ).timeout(const Duration(seconds: 20));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> tags = json.decode(response.body);
-        if (tags.isNotEmpty) {
-          // 返回最新的tag
-          final latestTag = tags.first;
-          debugPrint('UPDATE: 成功获取Git Tags信息');
-          // 将tag信息转换为AppUpdate格式
-          return AppUpdate.fromJson({
-            'tag_name': latestTag['name'],
-            'name': latestTag['name'],
-            'body': latestTag['message'] ?? '无发布说明',
-            'html_url': '$_githubReleasesUrl/tag/${latestTag['name']}',
-            'prerelease': false,
-          });
-        }
-      } else if (response.statusCode == 403) {
-        throw RateLimitException('GitHub Tags API rate limit exceeded');
-      } else {
-        debugPrint('UPDATE: GitHub Tags API请求失败，状态码: ${response.statusCode}');
-      }
-    } catch (e) {
-      if (e is RateLimitException) {
-        rethrow;
-      }
-      debugPrint('UPDATE: 获取Git Tags信息时发生错误: $e');
     }
 
     return null;
   }
 
-  /// 从备用API获取发布信息
-  Future<AppUpdate?> _fetchFromFallbackApi() async {
+  /// 获取GitHub Token
+  Future<String?> _getGitHubToken() async {
     try {
-      debugPrint('UPDATE: 尝试从备用API获取版本信息...');
-      final response = await http.get(
-        Uri.parse(_fallbackApiUrl),
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'FlutterIPTV-App/1.1.1',
+      // 首先尝试从编译时配置文件获取
+      try {
+        // 动态导入配置文件
+        final configExists = await File('lib/core/config/github_config.dart').exists();
+        if (configExists) {
+          // 这里我们可以读取配置文件内容
+          final configFile = File('lib/core/config/github_config.dart');
+          final content = await configFile.readAsString();
+          
+          // 使用正则表达式提取Token
+          final tokenRegex = RegExp(r"static const String githubToken = '([^']+)';");
+          final match = tokenRegex.firstMatch(content);
+          
+          if (match != null && match.group(1) != null) {
+            final token = match.group(1)!;
+            if (token.isNotEmpty && token != 'null') {
+              debugPrint('UPDATE: 使用编译时配置的GitHub Token');
+              return token;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('UPDATE: 编译时配置不可用: $e');
+      }
+
+      // 然后尝试从环境变量获取
+      final envToken = Platform.environment['GITHUB_TOKEN'];
+      if (envToken != null && envToken.isNotEmpty) {
+        debugPrint('UPDATE: 使用环境变量中的GitHub Token');
+        return envToken;
+      }
+
+      // 最后尝试从SharedPreferences获取
+      final prefs = ServiceLocator.prefs;
+      final token = prefs.getString('github_token');
+      if (token != null && token.isNotEmpty) {
+        debugPrint('UPDATE: 使用本地存储的GitHub Token');
+        return token;
+      }
+
+      debugPrint('UPDATE: 未找到GitHub Token');
+      return null;
+    } catch (e) {
+      debugPrint('UPDATE: 获取GitHub Token失败: $e');
+      return null;
+    }
+  }
+
+  /// 保存GitHub Token
+  Future<void> saveGitHubToken(String token) async {
+    try {
+      final prefs = ServiceLocator.prefs;
+      await prefs.setString('github_token', token);
+      debugPrint('UPDATE: GitHub Token已保存');
+    } catch (e) {
+      debugPrint('UPDATE: 保存GitHub Token失败: $e');
+    }
+  }
+
+  /// 获取当前应用版本
+  Future<String> getCurrentVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      return packageInfo.version;
+    } catch (e) {
+      debugPrint('UPDATE: 获取当前版本失败: $e');
+      return '0.0.0';
+    }
+  }
+
+  /// 下载更新文件
+  Future<String?> downloadUpdate(
+    String downloadUrl, {
+    Function(double)? onProgress,
+    Function(String)? onStatusChange,
+    int retryCount = 0,
+  }) async {
+    const maxRetries = 2; // 限制重试次数，避免无限循环
+    
+    // 检查是否已经在下载中，防止并发下载
+    if (_isDownloading) {
+      debugPrint('UPDATE: 已有下载任务在进行中，跳过此次下载');
+      onStatusChange?.call('已有下载任务在进行中...');
+      return null;
+    }
+    
+    _isDownloading = true;
+    
+    try {
+      debugPrint('UPDATE: 开始下载更新: $downloadUrl (尝试 ${retryCount + 1}/$maxRetries)');
+      onStatusChange?.call('准备下载...');
+
+      // 获取临时目录
+      final tempDir = await getTemporaryDirectory();
+      final fileName = downloadUrl.split('/').last;
+      final savePath = '${tempDir.path}/$fileName';
+
+      // 创建Dio实例
+      final dio = Dio();
+      
+      // 下载文件
+      await dio.download(
+        downloadUrl,
+        savePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            final progress = received / total;
+            onProgress?.call(progress);
+            onStatusChange?.call('下载中... ${(progress * 100).toStringAsFixed(1)}%');
+          }
         },
-      ).timeout(const Duration(seconds: 10));
+        options: Options(
+          receiveTimeout: const Duration(seconds: 20), // 减少超时时间
+          sendTimeout: const Duration(seconds: 20), // 减少发送超时时间
+          headers: {
+            'User-Agent': 'FlutterIPTV-App/1.1.1',
+          },
+        ),
+      );
+
+      debugPrint('UPDATE: 下载完成: $savePath');
+      onStatusChange?.call('下载完成');
+      return savePath;
+    } catch (e) {
+      debugPrint('UPDATE: 下载失败: $e');
+      
+      // 如果是网络错误且还有重试次数，则重试
+      if (retryCount < maxRetries &&
+          (e.toString().contains('Connection') ||
+           e.toString().contains('Timeout') ||
+           e.toString().contains('信号灯') ||
+           e.toString().contains('SocketException'))) {
+        debugPrint('UPDATE: 网络错误，正在重试... (${retryCount + 1}/$maxRetries)');
+        onStatusChange?.call('网络错误，正在重试... (${retryCount + 1}/$maxRetries)');
+        
+        // 等待一段时间后重试
+        await Future.delayed(Duration(seconds: 2 * (retryCount + 1)));
+        
+        return downloadUpdate(
+          downloadUrl,
+          onProgress: onProgress,
+          onStatusChange: onStatusChange,
+          retryCount: retryCount + 1,
+        );
+      }
+      
+      // 重试次数用完或不是网络错误，返回失败
+      onStatusChange?.call('下载失败: ${e.toString().length > 100 ? '网络连接错误' : e}');
+      return null;
+    } finally {
+      // 无论成功还是失败，都要释放锁
+      _isDownloading = false;
+    }
+  }
+
+  /// 获取最新发布的下载URL
+  Future<String?> getDownloadUrl(AppUpdate update) async {
+    try {
+      // 不再使用缓存的下载URL，因为缓存的可能不是当前平台的
+      
+      // 从GitHub API获取详细信息
+      final token = await _getGitHubToken();
+      final headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'FlutterIPTV-App/1.1.1',
+      };
+      
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'token $token';
+      }
+
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/shnulaa/FlutterIPTV/releases/tags/v${update.version}'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final releaseData = json.decode(response.body);
-        debugPrint('UPDATE: 成功从备用API获取版本信息');
-        return AppUpdate.fromJson(releaseData);
-      } else if (response.statusCode == 403) {
-        final rateLimitRemaining = response.headers['x-ratelimit-remaining'];
-        final rateLimitReset = response.headers['x-ratelimit-reset'];
-        debugPrint('UPDATE: 备用API也受到速率限制');
-        debugPrint('UPDATE: 剩余请求次数: $rateLimitRemaining');
-        debugPrint('UPDATE: 重置时间: $rateLimitReset');
+        final assets = releaseData['assets'] as List<dynamic>;
         
-        // 如果备用API也受限，返回GitHub页面链接作为最后的备用方案
-        debugPrint('UPDATE: 返回GitHub页面链接作为备用方案');
-        return AppUpdate.fromJson({
-          'tag_name': '1.1.13', // 当前版本
-          'name': 'FlutterIPTV',
-          'body': '由于API限制，请手动访问GitHub页面检查更新',
-          'html_url': _githubReleasesUrl,
-          'prerelease': false,
-          'download_url': _githubReleasesUrl,
-        });
-      } else {
-        debugPrint('UPDATE: 备用API请求失败，状态码: ${response.statusCode}');
+        if (assets.isNotEmpty) {
+          debugPrint('UPDATE: 当前平台: ${Platform.operatingSystem}');
+          
+          // 根据当前平台查找对应的安装包
+          for (final asset in assets) {
+            final name = asset['name'] as String;
+            debugPrint('UPDATE: 检查资源文件: $name');
+            
+            // Windows平台 - 优先查找Windows版本
+            if (Platform.isWindows) {
+              if (name.toLowerCase().contains('windows') ||
+                  name.toLowerCase().endsWith('.exe') ||
+                  name.toLowerCase().endsWith('.msi') ||
+                  name.toLowerCase().endsWith('.zip')) {
+                final downloadUrl = asset['browser_download_url'] as String;
+                debugPrint('UPDATE: 找到Windows下载链接: $downloadUrl');
+                return downloadUrl;
+              }
+            }
+            
+            // Android平台
+            if (Platform.isAndroid) {
+              if (name.toLowerCase().contains('android') || name.toLowerCase().endsWith('.apk')) {
+                final downloadUrl = asset['browser_download_url'] as String;
+                debugPrint('UPDATE: 找到Android下载链接: $downloadUrl');
+                return downloadUrl;
+              }
+            }
+          }
+          
+          // 如果没找到匹配的版本，返回第一个
+          final downloadUrl = assets.first['browser_download_url'] as String;
+          debugPrint('UPDATE: 未找到平台匹配的安装包，使用第一个下载链接: $downloadUrl');
+          return downloadUrl;
+        }
       }
+      
+      debugPrint('UPDATE: 无法获取下载URL，状态码: ${response.statusCode}');
+      return null;
     } catch (e) {
-      debugPrint('UPDATE: 从备用API获取版本信息时发生错误: $e');
+      debugPrint('UPDATE: 获取下载URL失败: $e');
+      return null;
     }
+  }
 
-    return null;
+  /// 安装更新文件
+  Future<bool> installUpdate(String filePath) async {
+    try {
+      debugPrint('UPDATE: 开始安装更新: $filePath');
+      
+      // 在Windows上，直接运行exe文件或msi安装包
+      if (Platform.isWindows) {
+        if (filePath.endsWith('.exe')) {
+          await Process.run(filePath, []);
+          debugPrint('UPDATE: EXE安装程序已启动');
+          return true;
+        } else if (filePath.endsWith('.msi')) {
+          await Process.run('msiexec', ['/i', filePath]);
+          debugPrint('UPDATE: MSI安装程序已启动');
+          return true;
+        } else {
+          // 尝试以默认方式打开文件
+          await Process.run('start', [filePath], runInShell: true);
+          debugPrint('UPDATE: 使用默认程序打开文件');
+          return true;
+        }
+      }
+      
+      debugPrint('UPDATE: 不支持的文件类型或平台');
+      return false;
+    } catch (e) {
+      debugPrint('UPDATE: 安装失败: $e');
+      return false;
+    }
+  }
+
+  /// 获取最后检查时间
+  Future<DateTime?> _getLastCheckTime() async {
+    try {
+      final prefs = ServiceLocator.prefs;
+      final timestamp = prefs.getInt('last_update_check');
+      if (timestamp == null) return null;
+      return DateTime.fromMillisecondsSinceEpoch(timestamp);
+    } catch (e) {
+      debugPrint('UPDATE: 获取最后检查时间失败: $e');
+      return null;
+    }
+  }
+
+  /// 保存检查时间
+  Future<void> _saveCheckTime(DateTime time) async {
+    try {
+      final prefs = ServiceLocator.prefs;
+      await prefs.setInt('last_update_check', time.millisecondsSinceEpoch);
+      debugPrint('UPDATE: 保存检查时间: $time');
+    } catch (e) {
+      debugPrint('UPDATE: 保存检查时间失败: $e');
+    }
   }
 
   /// 缓存发布信息
@@ -326,186 +444,6 @@ class UpdateService {
     } catch (e) {
       debugPrint('UPDATE: 获取缓存失败: $e');
       return null;
-    }
-  }
-
-  /// 比较版本号，判断是否为新版本
-  bool _isNewerVersion(String newVersion, String currentVersion) {
-    try {
-      final newVer = Version.parse(newVersion);
-      final currentVer = Version.parse(currentVersion);
-      return newVer > currentVer;
-    } catch (e) {
-      debugPrint('UPDATE: 版本号比较失败: $e');
-      return false;
-    }
-  }
-
-  /// 打开下载页面
-  Future<bool> openDownloadPage() async {
-    try {
-      final uri = Uri.parse(_githubReleasesUrl);
-      debugPrint('UPDATE: 打开下载页面: $_githubReleasesUrl');
-      return await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (e) {
-      debugPrint('UPDATE: 打开下载页面失败: $e');
-      return false;
-    }
-  }
-
-  /// 获取上次检查更新的时间
-  Future<DateTime?> _getLastUpdateCheckTime() async {
-    try {
-      // 这里应该使用SharedPreferences，但为了简化，我们先返回null
-      // 在实际项目中，需要导入并使用SharedPreferences
-      return null;
-    } catch (e) {
-      debugPrint('UPDATE: 获取上次检查时间失败: $e');
-      return null;
-    }
-  }
-
-  /// 保存上次检查更新的时间
-  Future<void> _saveLastUpdateCheckTime() async {
-    try {
-      // 这里应该使用SharedPreferences保存时间
-      // 在实际项目中，需要导入并使用SharedPreferences
-      debugPrint('UPDATE: 保存检查时间: ${DateTime.now()}');
-    } catch (e) {
-      debugPrint('UPDATE: 保存检查时间失败: $e');
-    }
-  }
-
-  /// 检查是否是移动平台（可以显示更新对话框）
-  // 注释掉未使用的方法
-  // bool get _isMobilePlatform {
-  //   // 这里可以添加平台检测逻辑
-  //   // 移动平台显示更新对话框，桌面平台可能直接打开下载页面
-  //   return true; // 暂时返回true
-  // }
-
-  /// 下载更新文件
-  Future<String?> downloadUpdate(
-    String downloadUrl, {
-    Function(double)? onProgress,
-    Function(String)? onStatusChange,
-  }) async {
-    try {
-      debugPrint('UPDATE: 开始下载更新文件: $downloadUrl');
-      onStatusChange?.call('准备下载...');
-
-      // 获取临时目录
-      final tempDir = await getTemporaryDirectory();
-      final fileName = downloadUrl.split('/').last;
-      final savePath = '${tempDir.path}/$fileName';
-      
-      debugPrint('UPDATE: 保存路径: $savePath');
-
-      // 创建Dio实例
-      final dio = Dio();
-      
-      // 下载文件
-      await dio.download(
-        downloadUrl,
-        savePath,
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            final progress = received / total;
-            onProgress?.call(progress);
-            debugPrint('UPDATE: 下载进度: ${(progress * 100).toStringAsFixed(1)}%');
-          }
-        },
-        options: Options(
-          receiveTimeout: const Duration(minutes: 10),
-          sendTimeout: const Duration(minutes: 10),
-        ),
-      );
-
-      debugPrint('UPDATE: 下载完成: $savePath');
-      onStatusChange?.call('下载完成');
-      return savePath;
-    } catch (e) {
-      debugPrint('UPDATE: 下载失败: $e');
-      onStatusChange?.call('下载失败: $e');
-      return null;
-    }
-  }
-
-  /// 获取最新发布的下载URL
-  Future<String?> getDownloadUrl(AppUpdate update) async {
-    // 首先尝试从缓存的发布信息中获取下载URL
-    if (update.downloadUrl != null && update.downloadUrl!.isNotEmpty) {
-      debugPrint('UPDATE: 使用缓存的下载URL: ${update.downloadUrl}');
-      return update.downloadUrl;
-    }
-
-    // 尝试从GitHub API获取详细信息
-    try {
-      debugPrint('UPDATE: 从GitHub API获取下载URL...');
-      final response = await http.get(
-        Uri.parse('https://api.github.com/repos/shnulaa/FlutterIPTV/releases/tags/${update.version}'),
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'FlutterIPTV-App/1.1.1',
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final releaseData = json.decode(response.body);
-        final assets = releaseData['assets'] as List<dynamic>;
-        
-        if (assets.isNotEmpty) {
-          // 查找Windows版本的安装包
-          for (final asset in assets) {
-            final name = asset['name'] as String;
-            if (name.contains('windows') || name.contains('exe')) {
-              final downloadUrl = asset['browser_download_url'] as String;
-              debugPrint('UPDATE: 找到Windows下载链接: $downloadUrl');
-              return downloadUrl;
-            }
-          }
-          
-          // 如果没找到Windows版本，返回第一个
-          final downloadUrl = assets.first['browser_download_url'] as String;
-          debugPrint('UPDATE: 使用第一个下载链接: $downloadUrl');
-          return downloadUrl;
-        }
-      } else if (response.statusCode == 403) {
-        debugPrint('UPDATE: GitHub API限制，尝试备用下载URL');
-        // 返回默认的GitHub Releases页面URL
-        return '$_githubReleasesUrl/tag/${update.version}';
-      } else {
-        debugPrint('UPDATE: 无法获取下载URL，状态码: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('UPDATE: 获取下载URL失败: $e');
-    }
-
-    // 备用方案：返回GitHub Releases页面URL
-    debugPrint('UPDATE: 使用备用下载URL: $_githubReleasesUrl/tag/${update.version}');
-    return '$_githubReleasesUrl/tag/${update.version}';
-  }
-
-  /// 安装更新文件
-  Future<bool> installUpdate(String filePath) async {
-    try {
-      debugPrint('UPDATE: 开始安装更新: $filePath');
-      
-      if (Platform.isWindows) {
-        // Windows平台：执行安装程序
-        final result = await Process.run(filePath, []);
-        debugPrint('UPDATE: 安装程序退出码: ${result.exitCode}');
-        return result.exitCode == 0;
-      } else {
-        debugPrint('UPDATE: 当前平台不支持自动安装');
-        return false;
-      }
-    } catch (e) {
-      debugPrint('UPDATE: 安装失败: $e');
-      return false;
     }
   }
 }
