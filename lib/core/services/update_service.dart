@@ -10,7 +10,6 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_update.dart';
 import '../services/service_locator.dart';
-import '../config/github_config.dart';
 
 class UpdateService {
   static const String _githubRepoUrl =
@@ -88,7 +87,13 @@ class UpdateService {
       // 如果有Token，添加到请求头
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'token $token';
-        debugPrint('UPDATE: 使用GitHub Token进行认证');
+        // 在调试模式下不打印完整的Token，只打印长度和前后几位字符
+        if (kDebugMode) {
+          final tokenPreview = token.length > 10
+            ? '${token.substring(0, 4)}...${token.substring(token.length - 4)}'
+            : '****';
+          debugPrint('UPDATE: 使用GitHub Token进行认证 (长度: ${token.length}, 预览: $tokenPreview)');
+        }
       } else {
         debugPrint('UPDATE: 未找到GitHub Token，使用未认证请求');
       }
@@ -126,44 +131,34 @@ class UpdateService {
   /// 获取GitHub Token
   Future<String?> _getGitHubToken() async {
     try {
-      // 首先尝试从编译时配置文件获取
-      try {
-        // 动态导入配置文件
-        final configExists = await File('lib/core/config/github_config.dart').exists();
-        if (configExists) {
-          // 这里我们可以读取配置文件内容
-          final configFile = File('lib/core/config/github_config.dart');
-          final content = await configFile.readAsString();
-          
-          // 使用正则表达式提取Token
-          final tokenRegex = RegExp(r"static const String githubToken = '([^']+)';");
-          final match = tokenRegex.firstMatch(content);
-          
-          if (match != null && match.group(1) != null) {
-            final token = match.group(1)!;
-            if (token.isNotEmpty && token != 'null') {
-              debugPrint('UPDATE: 使用编译时配置的GitHub Token');
-              return token;
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('UPDATE: 编译时配置不可用: $e');
+      // 首先尝试从编译时环境变量获取
+      final compileTimeToken = String.fromEnvironment('GITHUB_TOKEN', defaultValue: '');
+      if (compileTimeToken.isNotEmpty) {
+        debugPrint('UPDATE: 使用编译时环境变量中的GitHub Token');
+        return compileTimeToken;
       }
 
-      // 然后尝试从环境变量获取
+      // 然后尝试从运行时环境变量获取
       final envToken = Platform.environment['GITHUB_TOKEN'];
       if (envToken != null && envToken.isNotEmpty) {
-        debugPrint('UPDATE: 使用环境变量中的GitHub Token');
+        debugPrint('UPDATE: 使用运行时环境变量中的GitHub Token');
         return envToken;
       }
 
-      // 最后尝试从SharedPreferences获取
+      // 最后尝试从加密的SharedPreferences获取
       final prefs = ServiceLocator.prefs;
-      final token = prefs.getString('github_token');
-      if (token != null && token.isNotEmpty) {
-        debugPrint('UPDATE: 使用本地存储的GitHub Token');
-        return token;
+      final encryptedToken = prefs.getString('encrypted_github_token');
+      if (encryptedToken != null && encryptedToken.isNotEmpty) {
+        try {
+          // 简单的解密（仅用于混淆，不是真正的加密）
+          final token = _decryptToken(encryptedToken);
+          if (token.isNotEmpty) {
+            debugPrint('UPDATE: 使用本地存储的GitHub Token');
+            return token;
+          }
+        } catch (e) {
+          debugPrint('UPDATE: 解密GitHub Token失败: $e');
+        }
       }
 
       debugPrint('UPDATE: 未找到GitHub Token');
@@ -174,14 +169,50 @@ class UpdateService {
     }
   }
 
-  /// 保存GitHub Token
+  /// 保存GitHub Token（加密存储）
   Future<void> saveGitHubToken(String token) async {
     try {
       final prefs = ServiceLocator.prefs;
-      await prefs.setString('github_token', token);
-      debugPrint('UPDATE: GitHub Token已保存');
+      // 简单的加密（仅用于混淆，不是真正的加密）
+      final encryptedToken = _encryptToken(token);
+      await prefs.setString('encrypted_github_token', encryptedToken);
+      debugPrint('UPDATE: GitHub Token已加密保存');
     } catch (e) {
       debugPrint('UPDATE: 保存GitHub Token失败: $e');
+    }
+  }
+
+  /// 简单的Token加密（仅用于混淆，不是真正的加密）
+  String _encryptToken(String token) {
+    // 使用简单的XOR加密
+    final key = 'FlutterIPTV_Key_2024';
+    final bytes = token.codeUnits;
+    final keyBytes = key.codeUnits;
+    
+    final encrypted = <int>[];
+    for (int i = 0; i < bytes.length; i++) {
+      encrypted.add(bytes[i] ^ keyBytes[i % keyBytes.length]);
+    }
+    
+    return String.fromCharCodes(encrypted);
+  }
+
+  /// 简单的Token解密
+  String _decryptToken(String encryptedToken) {
+    try {
+      // 使用相同的XOR解密
+      final key = 'FlutterIPTV_Key_2024';
+      final bytes = encryptedToken.codeUnits;
+      final keyBytes = key.codeUnits;
+      
+      final decrypted = <int>[];
+      for (int i = 0; i < bytes.length; i++) {
+        decrypted.add(bytes[i] ^ keyBytes[i % keyBytes.length]);
+      }
+      
+      return String.fromCharCodes(decrypted);
+    } catch (e) {
+      return '';
     }
   }
 

@@ -5,7 +5,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath 'com.android.tools.build:gradle:8.3.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -23,17 +23,6 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
-    
-    // 解决插件命名空间问题
-    afterEvaluate {
-        if (project.hasProperty("android")) {
-            android {
-                if (namespace == null) {
-                    namespace = "com.flutteriptv.flutter_iptv"
-                }
-            }
-        }
-    }
 }
 
 tasks.register("clean", Delete) {

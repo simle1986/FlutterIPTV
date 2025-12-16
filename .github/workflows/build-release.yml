@@ -36,27 +36,23 @@ jobs:
       - name: Enable Windows Desktop Support
         run: flutter config --enable-windows-desktop
       
+      - name: Install NSIS
+        run: |
+          # Install NSIS using chocolatey
+          choco install nsis -y
+        shell: pwsh
+      
       - name: Get dependencies
         run: flutter pub get
       
-      - name: Create GitHub Token Config
+      - name: Set GitHub Token Environment Variable
         run: |
-          # 创建包含GitHub Token的配置文件
-          $configDir = "lib/core/config"
-          New-Item -ItemType Directory -Force -Path $configDir
-          
-          $configContent = @"
-          class GitHubConfig {
-            static const String githubToken = '${{ secrets.GITHUB_TOKEN }}';
-          }
-          "@
-          
-          Set-Content -Path "$configDir/github_config.dart" -Value $configContent
-          Write-Host "GitHub Token配置文件已创建"
+          Write-Host "Setting GITHUB_TOKEN environment variable for build"
+          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $env:GITHUB_ENV
         shell: pwsh
       
       - name: Build Windows Release
-        run: flutter build windows --release
+        run: flutter build windows --release --dart-define=GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
       
       - name: Download SQLite3 DLL
         run: |
@@ -135,7 +131,7 @@ jobs:
           # Create NSIS script
           $nsisScript = @"
           !define APPNAME "FlutterIPTV"
-          !define VERSION "${{ steps.version.outputs.VERSION || '1.1.14' }}"
+          !define VERSION "1.1.15"
           !define PUBLISHER "FlutterIPTV"
           !define URL "https://github.com/shnulaa/FlutterIPTV"
           !define EXECUTABLE "flutter_iptv.exe"
@@ -214,12 +210,12 @@ jobs:
           # Save NSIS script
           Set-Content -Path "installer.nsi" -Value $nsisScript
           
-          # Try to find and use NSIS
+          # Find NSIS installation (chocolatey installs to C:\ProgramData\chocolatey\bin\makensis.exe)
           $nsisPath = ""
           $possiblePaths = @(
+            "C:\ProgramData\chocolatey\bin\makensis.exe",
             "C:\Program Files (x86)\NSIS\makensis.exe",
-            "C:\Program Files\NSIS\makensis.exe",
-            "C:\msys64\mingw64\bin\makensis.exe"
+            "C:\Program Files\NSIS\makensis.exe"
           )
           
           foreach ($path in $possiblePaths) {
@@ -234,87 +230,16 @@ jobs:
             & $nsisPath "installer.nsi"
             if (Test-Path "flutteriptv-Windows-x64-Setup.exe") {
               Write-Host "NSIS installer created successfully!"
+              # Verify installer size
+              $installerSize = (Get-Item "flutteriptv-Windows-x64-Setup.exe").Length
+              Write-Host "Installer size: $installerSize bytes"
             } else {
-              Write-Host "NSIS installer creation failed, falling back to ZIP only"
+              Write-Error "NSIS installer creation failed!"
+              exit 1
             }
           } else {
-            Write-Host "NSIS not found, creating a simple self-extracting installer instead"
-            
-            # Create a simple self-extracting executable using PowerShell
-            $installerScript = @"
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          Add-Type -AssemblyName System.Windows.Forms
-          
-          function Extract-Installer {
-            param([string]`$zipPath, [string]`$extractPath)
-            
-            if (Test-Path `$extractPath) {
-              # Ask user if they want to overwrite
-              `$result = [System.Windows.Forms.MessageBox]::Show(
-                "FlutterIPTV is already installed. Do you want to overwrite?",
-                "FlutterIPTV Installer",
-                [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                [System.Windows.Forms.MessageBoxIcon]::Question
-              )
-              
-              if (`$result -eq [System.Windows.Forms.DialogResult]::No) {
-                return
-              }
-              
-              # Remove existing installation
-              Remove-Item -Path "`$extractPath\*" -Recurse -Force -ErrorAction SilentlyContinue
-            }
-            
-            # Create directory if it doesn't exist
-            New-Item -ItemType Directory -Force -Path `$extractPath | Out-Null
-            
-            # Extract ZIP file
-            [System.IO.Compression.ZipFile]::ExtractToDirectory(`$zipPath, `$extractPath)
-            
-            # Create desktop shortcut
-            `$desktopPath = [Environment]::GetFolderPath('Desktop')
-            `$shortcutPath = "`$desktopPath\FlutterIPTV.lnk"
-            `$targetPath = "`$extractPath\flutter_iptv.exe"
-            
-            `$shell = New-Object -ComObject WScript.Shell
-            `$shortcut = `$shell.CreateShortcut(`$shortcutPath)
-            `$shortcut.TargetPath = `$targetPath
-            `$shortcut.Save()
-            
-            [System.Windows.Forms.MessageBox]::Show(
-              "FlutterIPTV has been installed successfully!",
-              "Installation Complete",
-              [System.Windows.Forms.MessageBoxButtons]::OK,
-              [System.Windows.Forms.MessageBoxIcon]::Information
-            )
-          }
-          
-          # Get installation path
-          `$installPath = Join-Path `$env:ProgramFiles "FlutterIPTV"
-          
-          # Extract the embedded ZIP
-          `$zipData = [Convert]::FromBase64String('$([Convert]::ToBase64String([IO.File]::ReadAllBytes("flutteriptv-Windows-x64.zip")))')
-          `$zipPath = Join-Path `$env:TEMP "flutteriptv-install.zip"
-          [IO.File]::WriteAllBytes(`$zipPath, `$zipData)
-          
-          # Extract installer
-          Extract-Installer -zipPath `$zipPath -extractPath `$installPath
-          
-          # Clean up
-          Remove-Item `$zipPath -Force
-          "@
-            
-            # Convert the script to a base64 string for embedding
-            $scriptBytes = [System.Text.Encoding]::UTF8.GetBytes($installerScript)
-            $base64Script = [Convert]::ToBase64String($scriptBytes)
-            
-            # Create a PowerShell-based self-extracting installer
-            $selfExtractor = @"
-          @echo off
-          powershell -NoProfile -ExecutionPolicy Bypass -Command "& { [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('$base64Script')) | Invoke-Expression }"
-          "@
-            
-            Set-Content -Path "flutteriptv-Windows-x64-Setup.bat" -Value $selfExtractor
+            Write-Error "NSIS not found! Please ensure NSIS is installed."
+            exit 1
           }
         shell: pwsh
       
@@ -325,7 +250,6 @@ jobs:
           path: |
             flutteriptv-Windows-x64.zip
             flutteriptv-Windows-x64-Setup.exe
-            flutteriptv-Windows-x64-Setup.bat
           retention-days: 5
 
   # ============================================
@@ -356,22 +280,14 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
-      - name: Create GitHub Token Config
+      - name: Set GitHub Token Environment Variable
         run: |
-          # 创建包含GitHub Token的配置文件
-          mkdir -p lib/core/config
-          
-          cat > lib/core/config/github_config.dart << EOF
-          class GitHubConfig {
-            static const String githubToken = '${{ secrets.GITHUB_TOKEN }}';
-          }
-          EOF
-          
-          echo "GitHub Token配置文件已创建"
+          echo "Setting GITHUB_TOKEN environment variable for build"
+          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
         shell: bash
       
       - name: Build Android APK (Split by ABI)
-        run: flutter build apk --release --split-per-abi
+        run: flutter build apk --release --split-per-abi --dart-define=GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
       
       - name: Rename APKs for Mobile
         run: |
@@ -381,7 +297,7 @@ jobs:
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk dist/android-mobile/flutteriptv-Android-Mobile-x86_64.apk
       
       - name: Build Universal APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
       
       - name: Copy Universal APK
         run: |
@@ -422,24 +338,16 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
-      - name: Create GitHub Token Config
+      - name: Set GitHub Token Environment Variable
         run: |
-          # 创建包含GitHub Token的配置文件
-          mkdir -p lib/core/config
-          
-          cat > lib/core/config/github_config.dart << EOF
-          class GitHubConfig {
-            static const String githubToken = '${{ secrets.GITHUB_TOKEN }}';
-          }
-          EOF
-          
-          echo "GitHub Token配置文件已创建"
+          echo "Setting GITHUB_TOKEN environment variable for build"
+          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
         shell: bash
       
       - name: Build Android TV APK
         run: |
           # Build with TV flag enabled
-          flutter build apk --release --dart-define=IS_TV=true --split-per-abi
+          flutter build apk --release --dart-define=IS_TV=true --dart-define=GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} --split-per-abi
       
       - name: Rename APKs for TV
         run: |
@@ -449,7 +357,7 @@ jobs:
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk dist/android-tv/flutteriptv-AndroidTV-x86_64.apk
       
       - name: Build Universal TV APK
-        run: flutter build apk --release --dart-define=IS_TV=true
+        run: flutter build apk --release --dart-define=IS_TV=true --dart-define=GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
       
       - name: Copy Universal TV APK
         run: |
