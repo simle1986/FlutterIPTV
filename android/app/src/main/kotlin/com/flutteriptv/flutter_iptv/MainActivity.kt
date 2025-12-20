@@ -7,6 +7,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import androidx.activity.OnBackPressedCallback
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -19,6 +20,8 @@ class MainActivity: FlutterFragmentActivity() {
     private var playerFragment: NativePlayerFragment? = null
     private var playerContainer: FrameLayout? = null
     private var playerMethodChannel: MethodChannel? = null
+    
+    private lateinit var backPressedCallback: OnBackPressedCallback
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -96,6 +99,15 @@ class MainActivity: FlutterFragmentActivity() {
                 android.widget.FrameLayout.LayoutParams.MATCH_PARENT
             )
         )
+        
+        // Setup back press handling for Android 13+
+        backPressedCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                Log.d(TAG, "OnBackPressedCallback triggered")
+                hidePlayerFragment()
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, backPressedCallback)
     }
     
     private fun showPlayerFragment(
@@ -106,6 +118,9 @@ class MainActivity: FlutterFragmentActivity() {
         names: List<String>?
     ) {
         Log.d(TAG, "showPlayerFragment")
+        
+        // Enable back press callback when player is showing
+        backPressedCallback.isEnabled = true
         
         // Hide system UI
         window.setFlags(
@@ -145,6 +160,9 @@ class MainActivity: FlutterFragmentActivity() {
     private fun hidePlayerFragment() {
         Log.d(TAG, "hidePlayerFragment")
         
+        // Disable back press callback when player is hidden
+        backPressedCallback.isEnabled = false
+        
         playerFragment?.let {
             supportFragmentManager.beginTransaction()
                 .remove(it)
@@ -162,23 +180,17 @@ class MainActivity: FlutterFragmentActivity() {
     }
     
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        Log.d(TAG, "onKeyDown: keyCode=$keyCode, playerVisible=${playerContainer?.visibility == View.VISIBLE}")
         // If player is showing, let it handle keys
         if (playerFragment != null && playerContainer?.visibility == View.VISIBLE) {
             // Back key handling
             if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) {
+                Log.d(TAG, "Back key pressed, hiding player")
                 hidePlayerFragment()
                 return true
             }
         }
         return super.onKeyDown(keyCode, event)
-    }
-    
-    override fun onBackPressed() {
-        if (playerFragment != null && playerContainer?.visibility == View.VISIBLE) {
-            hidePlayerFragment()
-            return
-        }
-        super.onBackPressed()
     }
     
     override fun onResume() {

@@ -184,102 +184,69 @@ class _QrImportDialogState extends State<QrImportDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: AppTheme.surfaceColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        width: 400,
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
+        width: 520,
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Title - Fixed at top
-            Padding(
-              padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withAlpha(51),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.qr_code_scanner_rounded,
-                      color: AppTheme.primaryColor,
-                      size: 28,
-                    ),
+            // Title
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withAlpha(51),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '扫码导入播放列表',
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          '使用手机扫描二维码',
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: const Icon(
+                    Icons.qr_code_scanner_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 22,
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Scrollable content
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_isLoading)
-                      _buildLoadingState()
-                    else if (_error != null)
-                      _buildErrorState()
-                    else if (_isServerRunning)
-                      _buildQrCodeState(),
-                  ],
                 ),
-              ),
+                const SizedBox(width: 12),
+                const Text(
+                  '扫码导入播放列表',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // Close button - Fixed at bottom
-            Padding(
-              padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
-              child: TVFocusable(
-                autofocus: true,
-                onSelect: () => Navigator.of(context).pop(false),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.textSecondary,
-                      side: const BorderSide(color: AppTheme.cardColor),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+            // Content
+            if (_isLoading)
+              _buildLoadingState()
+            else if (_error != null)
+              _buildErrorState()
+            else if (_isServerRunning)
+              _buildQrCodeState(),
+
+            const SizedBox(height: 20),
+
+            // Close button
+            TVFocusable(
+              autofocus: true,
+              onSelect: () => Navigator.of(context).pop(false),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textSecondary,
+                    side: const BorderSide(color: AppTheme.cardColor),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Text('关闭'),
                   ),
+                  child: const Text('关闭'),
                 ),
               ),
             ),
@@ -339,168 +306,163 @@ class _QrImportDialogState extends State<QrImportDialog> {
   }
 
   Widget _buildQrCodeState() {
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // QR Code
+        // Left: QR Code
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: QrImageView(
             data: _serverService.serverUrl,
             version: QrVersions.auto,
-            size: 200,
+            size: 160,
             backgroundColor: Colors.white,
             errorCorrectionLevel: QrErrorCorrectLevel.M,
           ),
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(width: 20),
 
-        // Instructions
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.cardColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
+        // Right: Instructions and URL
+        Expanded(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  _buildStep('1', '使用手机扫描上方二维码'),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildStep('2', '在网页中输入链接或上传文件'),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildStep('3', '点击导入，电视将自动接收'),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Server URL
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppTheme.cardColor.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.wifi_rounded,
-                color: AppTheme.textMuted,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _serverService.serverUrl,
-                style: const TextStyle(
-                  color: AppTheme.textMuted,
-                  fontSize: 13,
-                  fontFamily: 'monospace',
+              // Instructions
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  children: [
+                    _buildStep('1', '使用手机扫描左侧二维码'),
+                    const SizedBox(height: 8),
+                    _buildStep('2', '在网页中输入链接或上传文件'),
+                    const SizedBox(height: 8),
+                    _buildStep('3', '点击导入，电视自动接收'),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
 
-        // Status message
-        if (_receivedMessage != null) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _receivedMessage!.contains('✓')
-                  ? Colors.green.withOpacity(0.2)
-                  : _receivedMessage!.contains('✗')
-                      ? Colors.red.withOpacity(0.2)
-                      : AppTheme.primaryColor.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (_isImporting)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppTheme.primaryColor,
+              const SizedBox(height: 12),
+
+              // Server URL
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor.withAlpha(128),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.wifi_rounded,
+                      color: AppTheme.textMuted,
+                      size: 16,
                     ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _serverService.serverUrl,
+                        style: const TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 13,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Status message
+              if (_receivedMessage != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: _receivedMessage!.contains('✓')
+                        ? Colors.green.withAlpha(51)
+                        : _receivedMessage!.contains('✗')
+                            ? Colors.red.withAlpha(51)
+                            : AppTheme.primaryColor.withAlpha(51),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                if (_isImporting) const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    _receivedMessage!,
-                    style: TextStyle(
-                      color: _receivedMessage!.contains('✓')
-                          ? Colors.green
-                          : _receivedMessage!.contains('✗')
-                              ? Colors.red
-                              : AppTheme.textPrimary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
+                  child: Row(
+                    children: [
+                      if (_isImporting)
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      if (_isImporting) const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _receivedMessage!,
+                          style: TextStyle(
+                            color: _receivedMessage!.contains('✓')
+                                ? Colors.green
+                                : _receivedMessage!.contains('✗')
+                                    ? Colors.red
+                                    : AppTheme.textPrimary,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
+            ],
           ),
-        ],
+        ),
       ],
     );
   }
 
   Widget _buildStep(String number, String text) {
-    return Expanded(
-      child: Row(
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: const TextStyle(
-                  color: AppTheme.primaryColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+    return Row(
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withAlpha(51),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          child: Center(
             child: Text(
-              text,
+              number,
               style: const TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 13,
+                color: AppTheme.primaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
