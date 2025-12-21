@@ -483,6 +483,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
           child: Video(
             controller: provider.videoController!,
             fill: Colors.black,
+            controls: NoVideoControls,
           ),
         );
       },
@@ -560,22 +561,23 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
               context.read<PlayerProvider>().stop();
               Navigator.of(context).pop();
             },
-            focusScale: 1.1,
+            focusScale: 1.0,
+            showFocusBorder: false,
             builder: (context, isFocused, child) {
-              return AnimatedContainer(
-                duration: AppTheme.animationFast,
-                padding: const EdgeInsets.all(10),
+              return Container(
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: isFocused ? AppTheme.primaryColor : const Color(0x33FFFFFF),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isFocused ? AppTheme.focusBorderColor : const Color(0x1AFFFFFF),
+                    width: isFocused ? 2 : 1,
                   ),
                 ),
                 child: child,
               );
             },
-            child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+            child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
           ),
 
           const SizedBox(width: 16),
@@ -645,17 +647,18 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                 onSelect: () {
                   if (currentChannel != null) favorites.toggleFavorite(currentChannel);
                 },
-                focusScale: 1.1,
+                focusScale: 1.0,
+                showFocusBorder: false,
                 builder: (context, isFocused, child) {
-                  return AnimatedContainer(
-                    duration: AppTheme.animationFast,
-                    padding: const EdgeInsets.all(10),
+                  return Container(
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       gradient: isFav ? AppTheme.lotusGradient : null,
                       color: isFav ? null : (isFocused ? AppTheme.primaryColor : const Color(0x33FFFFFF)),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: isFocused ? AppTheme.focusBorderColor : const Color(0x1AFFFFFF),
+                        width: isFocused ? 2 : 1,
                       ),
                     ),
                     child: child,
@@ -664,7 +667,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                 child: Icon(
                   isFav ? Icons.favorite : Icons.favorite_border_rounded,
                   color: Colors.white,
-                  size: 22,
+                  size: 18,
                 ),
               );
             },
@@ -678,19 +681,89 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     return Consumer<PlayerProvider>(
       builder: (context, provider, _) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Slim progress bar (if applicable)
+              // Control buttons row (moved above progress bar)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Volume control
+                  _buildVolumeControl(provider),
+
+                  const SizedBox(width: 16),
+
+                  // Play/Pause - Lotus gradient button (smaller)
+                  TVFocusable(
+                    autofocus: true,
+                    onSelect: provider.togglePlayPause,
+                    focusScale: 1.0,
+                    showFocusBorder: false,
+                    builder: (context, isFocused, child) {
+                      return Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.lotusGradient,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isFocused ? Colors.white : Colors.transparent,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryColor.withAlpha(isFocused ? 100 : 50),
+                              blurRadius: isFocused ? 16 : 8,
+                              spreadRadius: isFocused ? 2 : 1,
+                            ),
+                          ],
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: Icon(
+                      provider.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  // Settings button (smaller)
+                  TVFocusable(
+                    onSelect: () => _showSettingsSheet(context),
+                    focusScale: 1.0,
+                    showFocusBorder: false,
+                    builder: (context, isFocused, child) {
+                      return Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isFocused ? AppTheme.primaryColor : const Color(0x33FFFFFF),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isFocused ? AppTheme.focusBorderColor : const Color(0x1AFFFFFF),
+                            width: isFocused ? 2 : 1,
+                          ),
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: const Icon(Icons.settings_rounded, color: Colors.white, size: 18),
+                  ),
+                ],
+              ),
+
+              // Slim progress bar at bottom (if applicable)
               if (provider.duration.inSeconds > 0)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.only(top: 12),
                   child: SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      trackHeight: 3,
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                      trackHeight: 2,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 8),
                       activeTrackColor: AppTheme.primaryColor,
                       inactiveTrackColor: const Color(0x33FFFFFF),
                       thumbColor: AppTheme.primaryColor,
@@ -703,79 +776,10 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                   ),
                 ),
 
-              // Control buttons row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Volume control
-                  _buildVolumeControl(provider),
-
-                  const SizedBox(width: 24),
-
-                  // Play/Pause - Lotus gradient button
-                  TVFocusable(
-                    autofocus: true,
-                    onSelect: provider.togglePlayPause,
-                    focusScale: 1.1,
-                    builder: (context, isFocused, child) {
-                      return AnimatedContainer(
-                        duration: AppTheme.animationFast,
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.lotusGradient,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isFocused ? Colors.white : Colors.transparent,
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryColor.withAlpha(isFocused ? 150 : 80),
-                              blurRadius: isFocused ? 24 : 16,
-                              spreadRadius: isFocused ? 4 : 2,
-                            ),
-                          ],
-                        ),
-                        child: child,
-                      );
-                    },
-                    child: Icon(
-                      provider.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-
-                  const SizedBox(width: 24),
-
-                  // Settings button
-                  TVFocusable(
-                    onSelect: () => _showSettingsSheet(context),
-                    focusScale: 1.1,
-                    builder: (context, isFocused, child) {
-                      return AnimatedContainer(
-                        duration: AppTheme.animationFast,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isFocused ? AppTheme.primaryColor : const Color(0x33FFFFFF),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isFocused ? AppTheme.focusBorderColor : const Color(0x1AFFFFFF),
-                          ),
-                        ),
-                        child: child,
-                      );
-                    },
-                    child: const Icon(Icons.settings_rounded, color: Colors.white, size: 22),
-                  ),
-                ],
-              ),
-
               // Keyboard hints
               if (PlatformDetector.useDPadNavigation)
                 const Padding(
-                  padding: EdgeInsets.only(top: 16),
+                  padding: EdgeInsets.only(top: 8),
                   child: Text(
                     '↑↓ 切换频道 · ← 分类列表 · OK 播放/暂停',
                     style: TextStyle(color: Color(0x66FFFFFF), fontSize: 11),
@@ -794,16 +798,17 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       children: [
         TVFocusable(
           onSelect: provider.toggleMute,
-          focusScale: 1.1,
+          focusScale: 1.0,
+          showFocusBorder: false,
           builder: (context, isFocused, child) {
-            return AnimatedContainer(
-              duration: AppTheme.animationFast,
-              padding: const EdgeInsets.all(10),
+            return Container(
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: isFocused ? AppTheme.primaryColor : const Color(0x33FFFFFF),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isFocused ? AppTheme.focusBorderColor : const Color(0x1AFFFFFF),
+                  width: isFocused ? 2 : 1,
                 ),
               ),
               child: child,
@@ -816,17 +821,17 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                     ? Icons.volume_down_rounded
                     : Icons.volume_up_rounded,
             color: Colors.white,
-            size: 18,
+            size: 16,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         SizedBox(
-          width: 80,
+          width: 70,
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              trackHeight: 3,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+              trackHeight: 2,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 8),
             ),
             child: Slider(
               value: provider.isMuted ? 0 : provider.volume,
@@ -961,6 +966,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                             });
                           },
                           focusScale: 1.0,
+                          showFocusBorder: false,
                           builder: (context, isFocused, child) {
                             return Container(
                               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -969,7 +975,6 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                                 gradient: (isFocused || isSelected) ? AppTheme.lotusGradient : null,
                                 color: (isFocused || isSelected) ? null : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
-                                border: isFocused ? Border.all(color: Colors.white, width: 1) : null,
                               ),
                               child: child,
                             );
@@ -1073,15 +1078,15 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                       });
                     },
                     focusScale: 1.0,
+                    showFocusBorder: false,
                     builder: (context, isFocused, child) {
                       return Container(
                         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
                           gradient: isFocused ? AppTheme.lotusGradient : null,
-                          color: isPlaying ? const Color(0x33E91E63) : Colors.transparent,
+                          color: isPlaying && !isFocused ? const Color(0x33E91E63) : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
-                          border: isFocused ? Border.all(color: Colors.white, width: 1) : null,
                         ),
                         child: child,
                       );

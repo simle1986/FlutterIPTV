@@ -5,6 +5,42 @@ All notable changes to FlutterIPTV will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.30] - 2024-12-21
+
+### Added
+- **Player Category Panel**: Press LEFT key to open category/channel panel in player
+- Auto-locate current playing channel when opening category panel
+- Double-press BACK to exit player (prevents accidental exit)
+
+### Changed
+- Category order now preserves M3U file original order (instead of alphabetical)
+- Disabled LEFT/RIGHT seek for live streams (not applicable)
+
+### Fixed
+- Fixed status indicator color not updating (LIVE/Buffering/Offline)
+- Fixed category selection highlight not clearing properly
+
+## [1.1.28] - 2024-12-21
+
+### Added
+- **Lotus Theme UI**: Pure black background with pink/purple gradient accents
+- **TV Sidebar Navigation**: Auto-collapsing sidebar (expands on focus)
+- **Native ExoPlayer**: Media3 ExoPlayer for Android TV 4K playback
+- Glassmorphism style cards for desktop/mobile
+- Channel long-press menu on TV (favorite/test)
+- Default channel logo for missing thumbnails
+- Recommended channels with refresh button
+
+### Changed
+- TV interface optimized: removed animations for smooth performance
+- Home screen redesigned with compact header and horizontal category chips
+- Channel rows show max 7 items with "More" button
+- Favorites section moved to bottom (only shows if has favorites)
+
+### Fixed
+- Fixed recommended channels not showing on first load
+- Fixed Android TV app icon not using custom icon
+
 ## [1.0.15] - 2024-12-14
 
 ### Added

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:window_manager/window_manager.dart';
 import 'core/i18n/app_strings.dart';
 
 import 'dart:io';
@@ -17,6 +18,7 @@ import 'features/player/providers/player_provider.dart';
 import 'features/playlist/providers/playlist_provider.dart';
 import 'features/favorites/providers/favorites_provider.dart';
 import 'features/settings/providers/settings_provider.dart';
+import 'core/widgets/window_title_bar.dart';
 
 void main() async {
   // Catch all Flutter errors
@@ -39,6 +41,25 @@ void main() async {
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
+    }
+    
+    // Initialize window manager for Windows
+    if (Platform.isWindows) {
+      await windowManager.ensureInitialized();
+      
+      WindowOptions windowOptions = const WindowOptions(
+        size: Size(1280, 720),
+        minimumSize: Size(800, 600),
+        center: true,
+        backgroundColor: Colors.black,
+        titleBarStyle: TitleBarStyle.hidden,
+        windowButtonVisibility: false,
+      );
+      
+      await windowManager.waitUntilReadyToShow(windowOptions, () async {
+        await windowManager.show();
+        await windowManager.focus();
+      });
     }
 
     // Initialize critical services (Prefs) immediately for SettingsProvider
@@ -153,7 +174,14 @@ class FlutterIPTVApp extends StatelessWidget {
                 data: MediaQuery.of(context).copyWith(
                   textScaler: const TextScaler.linear(1.0),
                 ),
-                child: child!,
+                child: Platform.isWindows
+                    ? Column(
+                        children: [
+                          const WindowTitleBar(),
+                          Expanded(child: child!),
+                        ],
+                      )
+                    : child!,
               );
             },
           );

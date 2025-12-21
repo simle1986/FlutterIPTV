@@ -234,6 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return TVFocusable(
       onSelect: onTap,
       focusScale: 1.0,
+      showFocusBorder: false,
       builder: (context, isFocused, child) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -241,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
             gradient: isPrimary || isFocused ? AppTheme.lotusGradient : null,
             color: isPrimary || isFocused ? null : AppTheme.glassColor,
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-            border: Border.all(color: isFocused ? AppTheme.focusBorderColor : AppTheme.glassBorderColor),
+            border: Border.all(color: isFocused ? AppTheme.focusBorderColor : AppTheme.glassBorderColor, width: isFocused ? 2 : 1),
           ),
           child: child,
         );
@@ -271,6 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: TVFocusable(
               onSelect: () => Navigator.pushNamed(context, AppRouter.channels, arguments: {'groupName': group.name}),
               focusScale: 1.0,
+              showFocusBorder: false,
               builder: (context, isFocused, child) {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -312,6 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
               TVFocusable(
                 onSelect: onRefresh,
                 focusScale: 1.0,
+                showFocusBorder: false,
                 builder: (context, isFocused, child) {
                   return Container(
                     padding: const EdgeInsets.all(5),
@@ -330,6 +333,7 @@ class _HomeScreenState extends State<HomeScreen> {
               TVFocusable(
                 onSelect: onMoreTap,
                 focusScale: 1.0,
+                showFocusBorder: false,
                 builder: (context, isFocused, child) {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

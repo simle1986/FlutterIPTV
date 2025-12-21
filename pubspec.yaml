@@ -48,6 +48,9 @@ dependencies:
   
   # Utilities
   intl: ^0.20.2
+  
+  # Window Management (Windows)
+  window_manager: ^0.3.9
   collection: ^1.18.0
   uuid: ^4.2.1
   
