@@ -66,6 +66,27 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.storage_rounded,
                   onTap: () => _showBufferSizeDialog(context, settings),
                 ),
+                _buildDivider(),
+                _buildSwitchTile(
+                  context,
+                  title: '音量平衡',
+                  subtitle: '自动调节不同频道的音量差异',
+                  icon: Icons.volume_up_rounded,
+                  value: settings.volumeNormalization,
+                  onChanged: (value) => settings.setVolumeNormalization(value),
+                ),
+                if (settings.volumeNormalization) ...[
+                  _buildDivider(),
+                  _buildSelectTile(
+                    context,
+                    title: '音量增益',
+                    subtitle: settings.volumeBoost == 0
+                        ? '无增益'
+                        : '${settings.volumeBoost > 0 ? '+' : ''}${settings.volumeBoost} dB',
+                    icon: Icons.equalizer_rounded,
+                    onTap: () => _showVolumeBoostDialog(context, settings),
+                  ),
+                ],
               ]),
 
               const SizedBox(height: 24),
@@ -668,6 +689,55 @@ class SettingsScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  void _showVolumeBoostDialog(BuildContext context, SettingsProvider settings) {
+    final options = [-10, -5, 0, 5, 10, 15, 20];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppTheme.surfaceColor,
+          title: const Text(
+            '音量增益 / Volume Boost',
+            style: TextStyle(color: AppTheme.textPrimary),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: options.map((db) {
+              return RadioListTile<int>(
+                title: Text(
+                  db == 0 ? '无增益 (0 dB)' : '${db > 0 ? '+' : ''}$db dB',
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                ),
+                subtitle: Text(
+                  _getVolumeBoostDescription(db),
+                  style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
+                ),
+                value: db,
+                groupValue: settings.volumeBoost,
+                onChanged: (value) {
+                  if (value != null) {
+                    settings.setVolumeBoost(value);
+                    Navigator.pop(context);
+                  }
+                },
+                activeColor: AppTheme.primaryColor,
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  String _getVolumeBoostDescription(int db) {
+    if (db <= -10) return '大幅降低音量';
+    if (db < 0) return '略微降低音量';
+    if (db == 0) return '保持原始音量';
+    if (db <= 10) return '略微提高音量';
+    return '大幅提高音量';
   }
 
   void _showRefreshIntervalDialog(

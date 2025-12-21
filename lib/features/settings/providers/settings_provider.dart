@@ -20,6 +20,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _keyRememberLastChannel = 'remember_last_channel';
   static const String _keyLastChannelId = 'last_channel_id';
   static const String _keyLocale = 'locale';
+  static const String _keyVolumeNormalization = 'volume_normalization';
+  static const String _keyVolumeBoost = 'volume_boost';
 
   // Settings values
   String _themeMode = 'dark';
@@ -38,6 +40,8 @@ class SettingsProvider extends ChangeNotifier {
   bool _rememberLastChannel = true;
   int? _lastChannelId;
   Locale? _locale;
+  bool _volumeNormalization = false;
+  int _volumeBoost = 0; // -20 to +20 dB
 
   // Getters
   String get themeMode => _themeMode;
@@ -55,6 +59,8 @@ class SettingsProvider extends ChangeNotifier {
   bool get rememberLastChannel => _rememberLastChannel;
   int? get lastChannelId => _lastChannelId;
   Locale? get locale => _locale;
+  bool get volumeNormalization => _volumeNormalization;
+  int get volumeBoost => _volumeBoost;
 
   SettingsProvider() {
     _loadSettings();
@@ -84,6 +90,8 @@ class SettingsProvider extends ChangeNotifier {
       final parts = localeCode.split('_');
       _locale = Locale(parts[0], parts.length > 1 ? parts[1] : null);
     }
+    _volumeNormalization = prefs.getBool(_keyVolumeNormalization) ?? false;
+    _volumeBoost = prefs.getInt(_keyVolumeBoost) ?? 0;
 
     notifyListeners();
   }
@@ -117,6 +125,8 @@ class SettingsProvider extends ChangeNotifier {
     if (_locale != null) {
       await prefs.setString(_keyLocale, _locale!.languageCode);
     }
+    await prefs.setBool(_keyVolumeNormalization, _volumeNormalization);
+    await prefs.setInt(_keyVolumeBoost, _volumeBoost);
   }
 
   // Setters with persistence
@@ -222,6 +232,18 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setVolumeNormalization(bool enabled) async {
+    _volumeNormalization = enabled;
+    await _saveSettings();
+    notifyListeners();
+  }
+
+  Future<void> setVolumeBoost(int db) async {
+    _volumeBoost = db.clamp(-20, 20);
+    await _saveSettings();
+    notifyListeners();
+  }
+
   // Reset all settings to defaults
   Future<void> resetSettings() async {
     _themeMode = 'dark';
@@ -236,6 +258,8 @@ class SettingsProvider extends ChangeNotifier {
     _parentalPin = null;
     _autoPlay = true;
     _rememberLastChannel = true;
+    _volumeNormalization = false;
+    _volumeBoost = 0;
 
     await _saveSettings();
     notifyListeners();

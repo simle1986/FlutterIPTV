@@ -5,9 +5,11 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io' show Platform;
 import 'dart:async';
+import 'dart:math' as math;
 
 import '../../../core/models/channel.dart';
 import '../../../core/platform/platform_detector.dart';
+import '../../../core/services/service_locator.dart';
 
 enum PlayerState {
   idle,
@@ -41,6 +43,7 @@ class PlayerProvider extends ChangeNotifier {
   double _playbackSpeed = 1.0;
   bool _isFullscreen = false;
   bool _controlsVisible = true;
+  int _volumeBoostDb = 0;
 
   int _retryCount = 0;
   static const int _maxRetries = 2;
@@ -250,6 +253,7 @@ class PlayerProvider extends ChangeNotifier {
     _currentChannel = channel;
     _state = PlayerState.loading;
     _error = null;
+    loadVolumeSettings(); // Apply volume boost settings
     notifyListeners();
 
     try {
@@ -262,6 +266,7 @@ class PlayerProvider extends ChangeNotifier {
   Future<void> playUrl(String url, {String? name}) async {
     _state = PlayerState.loading;
     _error = null;
+    loadVolumeSettings(); // Apply volume boost settings
     notifyListeners();
 
     try {
@@ -295,15 +300,53 @@ class PlayerProvider extends ChangeNotifier {
 
   void setVolume(double volume) {
     _volume = volume.clamp(0.0, 1.0);
-    _useExoPlayer ? _exoPlayer?.setVolume(_volume) : _mediaKitPlayer?.setVolume(_volume * 100);
+    _applyVolume();
     if (_volume > 0) _isMuted = false;
     notifyListeners();
   }
 
   void toggleMute() {
     _isMuted = !_isMuted;
-    _useExoPlayer ? _exoPlayer?.setVolume(_isMuted ? 0 : _volume) : _mediaKitPlayer?.setVolume(_isMuted ? 0 : _volume * 100);
+    _applyVolume();
     notifyListeners();
+  }
+
+  /// Apply volume boost from settings (in dB)
+  void setVolumeBoost(int db) {
+    _volumeBoostDb = db.clamp(-20, 20);
+    _applyVolume();
+    notifyListeners();
+  }
+
+  /// Load volume settings from preferences
+  void loadVolumeSettings() {
+    final prefs = ServiceLocator.prefs;
+    final normEnabled = prefs.getBool('volume_normalization') ?? false;
+    if (normEnabled) {
+      _volumeBoostDb = prefs.getInt('volume_boost') ?? 0;
+    } else {
+      _volumeBoostDb = 0;
+    }
+    _applyVolume();
+  }
+
+  /// Calculate and apply the effective volume with boost
+  void _applyVolume() {
+    if (_isMuted) {
+      _useExoPlayer ? _exoPlayer?.setVolume(0) : _mediaKitPlayer?.setVolume(0);
+      return;
+    }
+
+    // Convert dB to linear multiplier: multiplier = 10^(dB/20)
+    final multiplier = math.pow(10, _volumeBoostDb / 20.0);
+    final effectiveVolume = (_volume * multiplier).clamp(0.0, 2.0); // Allow up to 2x volume
+
+    if (_useExoPlayer) {
+      _exoPlayer?.setVolume(effectiveVolume);
+    } else {
+      // media_kit uses 0-100 scale, but can go higher for boost
+      _mediaKitPlayer?.setVolume(effectiveVolume * 100);
+    }
   }
 
   void setPlaybackSpeed(double speed) {

@@ -20,6 +20,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.DecoderReuseEvaluation
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.ui.PlayerView
@@ -585,7 +586,12 @@ class NativePlayerFragment : Fragment() {
 
     private fun initializePlayer() {
         Log.d(TAG, "Initializing ExoPlayer")
-        player = ExoPlayer.Builder(requireContext()).build().also { exoPlayer ->
+        
+        // Use DefaultRenderersFactory with FFmpeg extension for MP2/AC3/DTS audio support
+        val renderersFactory = DefaultRenderersFactory(requireContext())
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        
+        player = ExoPlayer.Builder(requireContext(), renderersFactory).build().also { exoPlayer ->
             playerView.player = exoPlayer
             exoPlayer.playWhenReady = true
             exoPlayer.repeatMode = Player.REPEAT_MODE_OFF
