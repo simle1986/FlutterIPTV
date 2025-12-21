@@ -32,6 +32,16 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 当从其他页面返回时，检查是否需要刷新推荐频道
+    final channelProvider = context.read<ChannelProvider>();
+    if (_recommendedChannels.isEmpty && channelProvider.channels.isNotEmpty) {
+      _refreshRecommendedChannels();
+    }
+  }
+
   Future<void> _loadData() async {
     final playlistProvider = context.read<PlaylistProvider>();
     final channelProvider = context.read<ChannelProvider>();
@@ -138,6 +148,13 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!playlistProvider.hasPlaylists) return _buildEmptyState();
         if (channelProvider.isLoading) {
           return const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor));
+        }
+        
+        // 频道加载完成后，如果推荐频道为空则初始化
+        if (_recommendedChannels.isEmpty && channelProvider.channels.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _refreshRecommendedChannels();
+          });
         }
         
         final favChannels = _getFavoriteChannels(channelProvider);
