@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
@@ -31,6 +32,8 @@ class TVSidebar extends StatefulWidget {
 class _TVSidebarState extends State<TVSidebar> {
   bool _expanded = false;
   final List<FocusNode> _menuFocusNodes = [];
+  Timer? _navDelayTimer;  // 延迟导航定时器
+  int? _pendingNavIndex;  // 待导航的菜单索引
 
   @override
   void initState() {
@@ -54,6 +57,7 @@ class _TVSidebarState extends State<TVSidebar> {
 
   @override
   void dispose() {
+    _navDelayTimer?.cancel();
     for (final node in _menuFocusNodes) {
       node.dispose();
     }
@@ -184,6 +188,21 @@ class _TVSidebarState extends State<TVSidebar> {
         onFocusChange: (hasFocus) {
           // 强制刷新UI
           if (mounted) setState(() {});
+          
+          // 延迟触发导航
+          if (hasFocus && index != widget.selectedIndex) {
+            _navDelayTimer?.cancel();
+            _pendingNavIndex = index;
+            _navDelayTimer = Timer(const Duration(milliseconds: 500), () {
+              if (mounted && _pendingNavIndex == index) {
+                _onNavItemTap(index, item.route);
+              }
+            });
+          } else if (!hasFocus && _pendingNavIndex == index) {
+            // 失去焦点时取消待导航
+            _navDelayTimer?.cancel();
+            _pendingNavIndex = null;
+          }
         },
         onKeyEvent: (node, event) {
           if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -192,10 +211,16 @@ class _TVSidebarState extends State<TVSidebar> {
           if (key == LogicalKeyboardKey.select ||
               key == LogicalKeyboardKey.enter ||
               key == LogicalKeyboardKey.space) {
+            // 手动确认时立即导航，取消延迟
+            _navDelayTimer?.cancel();
+            _pendingNavIndex = null;
             _onNavItemTap(index, item.route);
             return KeyEventResult.handled;
           }
           if (key == LogicalKeyboardKey.arrowRight && widget.onRight != null) {
+            // 按右键时取消延迟导航
+            _navDelayTimer?.cancel();
+            _pendingNavIndex = null;
             widget.onRight!();
             return KeyEventResult.handled;
           }
