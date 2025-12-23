@@ -74,3 +74,4 @@ coverage/
 # Temporary database files
 temp_db.bin
 *.db.bin
+.claude/settings.local.json
