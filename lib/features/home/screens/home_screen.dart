@@ -389,8 +389,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const cardSpacing = 12.0;
             final availableWidth = constraints.maxWidth;
             
-            // 计算能显示多少个卡片
-            final maxCards = ((availableWidth + cardSpacing) / (cardWidth + cardSpacing)).floor();
+            // 计算能显示多少个卡片，多加1个让布局更美观
+            final maxCards = ((availableWidth + cardSpacing) / (cardWidth + cardSpacing)).floor() + 1;
             // 显示数量不能超过实际频道数量，最少显示1个
             final displayCount = maxCards.clamp(1, channels.length);
             
