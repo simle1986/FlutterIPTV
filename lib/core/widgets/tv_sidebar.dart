@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../navigation/app_router.dart';
 import '../i18n/app_strings.dart';
@@ -63,15 +64,18 @@ class _TVSidebarState extends State<TVSidebar> {
     if (index == widget.selectedIndex) return;
     
     if (index == 0) {
-      // 返回首页
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      // 返回首页：先 pop 到 splash，再 push 新的 home
+      // 这样 home 会被销毁重建，焦点状态会被正确重置
+      Navigator.of(context).popUntil((r) => r.settings.name == AppRouter.splash);
+      Navigator.pushNamed(context, AppRouter.home);
     } else if (route != null) {
       if (widget.selectedIndex == 0) {
         // 从首页跳转
         Navigator.pushNamed(context, route);
       } else {
         // 从其他页面跳转，先返回首页再跳转
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.of(context).popUntil((r) => r.settings.name == AppRouter.splash);
+        Navigator.pushNamed(context, AppRouter.home);
         Navigator.pushNamed(context, route);
       }
     }
@@ -149,38 +153,68 @@ class _TVSidebarState extends State<TVSidebar> {
 
   Widget _buildNavItem(int index, _NavItem item) {
     final isSelected = widget.selectedIndex == index;
+    final focusNode = index < _menuFocusNodes.length ? _menuFocusNodes[index] : null;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      child: TVFocusable(
-        focusNode: index < _menuFocusNodes.length ? _menuFocusNodes[index] : null,
+      child: Focus(
+        focusNode: focusNode,
         autofocus: index == widget.selectedIndex,
-        onSelect: () => _onNavItemTap(index, item.route),
-        onRight: widget.onRight,  // 传递右键回调
-        focusScale: 1.0,
-        showFocusBorder: false,
-        builder: (context, isFocused, child) {
-          final isActive = isSelected || isFocused;
-          return Container(
-            padding: EdgeInsets.symmetric(horizontal: _expanded ? 10 : 8, vertical: 10),
-            decoration: BoxDecoration(
-              gradient: isActive ? AppTheme.lotusGradient : null,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: _expanded
-                ? Row(
-                    children: [
-                      Icon(item.icon, color: isActive ? Colors.white : AppTheme.textMuted, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(item.label, style: TextStyle(color: isActive ? Colors.white : AppTheme.textSecondary, fontSize: 12, fontWeight: isActive ? FontWeight.w600 : FontWeight.normal)),
-                      ),
-                    ],
-                  )
-                : Center(child: Icon(item.icon, color: isActive ? Colors.white : AppTheme.textMuted, size: 18)),
-          );
+        onFocusChange: (hasFocus) {
+          // 强制刷新UI
+          if (mounted) setState(() {});
         },
-        child: const SizedBox.shrink(),
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.space) {
+            _onNavItemTap(index, item.route);
+            return KeyEventResult.handled;
+          }
+          if (key == LogicalKeyboardKey.arrowRight && widget.onRight != null) {
+            widget.onRight!();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onTap: () => _onNavItemTap(index, item.route),
+          child: Builder(
+            builder: (context) {
+              // 直接检查 FocusNode 的实际焦点状态
+              final isFocused = focusNode?.hasFocus ?? false;
+              // 只有当侧边栏展开时才显示焦点高亮
+              final showHighlight = isFocused && _expanded;
+              final showSelected = isSelected && !showHighlight;
+              
+              return Container(
+                padding: EdgeInsets.symmetric(horizontal: _expanded ? 10 : 8, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: showHighlight ? AppTheme.lotusGradient : null,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: _expanded
+                    ? Row(
+                        children: [
+                          Icon(item.icon, color: showHighlight ? Colors.white : (showSelected ? AppTheme.primaryColor : AppTheme.textMuted), size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(item.label, style: TextStyle(
+                              color: showHighlight ? Colors.white : (showSelected ? AppTheme.primaryColor : AppTheme.textSecondary), 
+                              fontSize: 12, 
+                              fontWeight: (showHighlight || showSelected) ? FontWeight.w600 : FontWeight.normal,
+                            )),
+                          ),
+                        ],
+                      )
+                    : Center(child: Icon(item.icon, color: showHighlight ? Colors.white : (showSelected ? AppTheme.primaryColor : AppTheme.textMuted), size: 18)),
+              );
+            },
+          ),
+        ),
       ),
     );
   }

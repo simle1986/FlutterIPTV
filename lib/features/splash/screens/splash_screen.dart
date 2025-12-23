@@ -75,7 +75,9 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 1500));
 
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed(AppRouter.home);
+      // 不用 pushReplacementNamed，而是用 pushNamed
+      // 这样 splash 会留在栈底，home 是 push 上去的
+      Navigator.of(context).pushNamed(AppRouter.home);
     }
   }
 
