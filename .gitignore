@@ -75,3 +75,10 @@ coverage/
 temp_db.bin
 *.db.bin
 .claude/settings.local.json
+
+# Android signing
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+*.jks
+*.keystore
