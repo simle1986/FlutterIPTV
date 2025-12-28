@@ -1,0 +1,14 @@
+{
+  "version": "1.1.72",
+  "build": 72,
+  "releaseDate": "2025-12-28",
+  "assets": {
+    "android": "https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.72/app-release.apk",
+    "windows": "https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.72/flutter_iptv_windows.zip"
+  },
+  "changelog": {
+    "zh": "- 修复 DLNA 自动启动问题\n- 优化播放器性能",
+    "en": "- Fix DLNA auto-start issue\n- Improve player performance"
+  },
+  "minVersion": "1.0.0"
+}
