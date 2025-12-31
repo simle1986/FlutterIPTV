@@ -994,17 +994,6 @@ class NativePlayerFragment : Fragment() {
     // 显示源切换指示器
     private fun showSourceIndicator() {
         updateSourceIndicator()
-        // 显示源指示器
-        activity?.runOnUiThread {
-            sourceIndicator.visibility = View.VISIBLE
-            // 取消之前的隐藏任务
-            sourceIndicatorHideRunnable?.let { handler.removeCallbacks(it) }
-            // 3秒后自动隐藏
-            sourceIndicatorHideRunnable = Runnable {
-                sourceIndicator.visibility = View.GONE
-            }
-            handler.postDelayed(sourceIndicatorHideRunnable!!, SOURCE_INDICATOR_HIDE_DELAY)
-        }
     }
     
     // 更新源指示器显示
@@ -1014,6 +1003,7 @@ class NativePlayerFragment : Fragment() {
             if (sources.size > 1) {
                 // 更新源指示器文本
                 sourceText.text = "源 ${currentSourceIndex + 1}/${sources.size}"
+                sourceIndicator.visibility = View.VISIBLE
                 // 频道名称不再显示源信息
                 channelNameText.text = currentName
             } else {

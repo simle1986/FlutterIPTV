@@ -146,23 +146,36 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         final channelProvider = context.read<ChannelProvider>();
         final channels = channelProvider.channels;
 
-        // Find current channel index
+        // DLNA 模式下不使用频道列表，直接播放传入的 URL
+        List<String> urls;
+        List<String> names;
+        List<String> groups;
+        List<List<String>> sources;
         int currentIndex = 0;
-        for (int i = 0; i < channels.length; i++) {
-          if (channels[i].url == widget.channelUrl) {
-            currentIndex = i;
-            break;
+        
+        if (isDlnaMode) {
+          // DLNA 模式：只播放传入的 URL，不提供频道切换功能
+          urls = [widget.channelUrl];
+          names = [widget.channelName];
+          groups = ['DLNA'];
+          sources = [[widget.channelUrl]];
+          currentIndex = 0;
+        } else {
+          // 正常模式：使用频道列表
+          // Find current channel index
+          for (int i = 0; i < channels.length; i++) {
+            if (channels[i].url == widget.channelUrl) {
+              currentIndex = i;
+              break;
+            }
           }
+          urls = channels.map((c) => c.url).toList();
+          names = channels.map((c) => c.name).toList();
+          groups = channels.map((c) => c.groupName ?? '').toList();
+          sources = channels.map((c) => c.sources).toList();
         }
 
-        // Prepare channel lists with groups
-        // DLNA 模式下也传递频道列表，但通过 isDlnaMode 参数告诉原生播放器
-        final urls = channels.map((c) => c.url).toList();
-        final names = channels.map((c) => c.name).toList();
-        final groups = channels.map((c) => c.groupName ?? '').toList();
-        final sources = channels.map((c) => c.sources).toList(); // 每个频道的所有源
-
-        debugPrint('PlayerScreen: Launching native player for ${widget.channelName} (isDlna=$isDlnaMode, index $currentIndex of ${channels.length})');
+        debugPrint('PlayerScreen: Launching native player for ${widget.channelName} (isDlna=$isDlnaMode, index $currentIndex of ${urls.length})');
 
         // 获取缓冲强度设置和FPS显示设置
         final settingsProvider = context.read<SettingsProvider>();
