@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/shnulaa/FlutterIPTV/releases">
-    <img src="https://img.shields.io/badge/版本-1.1.82-blue.svg" alt="版本">
+    <img src="https://img.shields.io/github/v/release/shnulaa/FlutterIPTV?include_prereleases" alt="最新版本">
   </a>
   <a href="https://github.com/shnulaa/FlutterIPTV/actions/workflows/build-release.yml">
     <img src="https://github.com/shnulaa/FlutterIPTV/actions/workflows/build-release.yml/badge.svg" alt="构建状态">
@@ -71,24 +71,12 @@ Lotus IPTV 是一款基于 Flutter 开发的现代化高性能 IPTV 播放器。
 
 ## 🚀 下载安装
 
-从 [Releases 页面](https://github.com/shnulaa/FlutterIPTV/releases/tag/v1.1.82) 下载最新版本 (v1.1.82)。
+从 [Releases 页面](https://github.com/shnulaa/FlutterIPTV/releases/latest) 下载最新版本。
 
-### Windows
-- [Windows x64 安装包](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-Windows-x64-Setup.exe)
-
-### Android 手机版
-| 架构 | 下载 |
-|------|------|
-| arm64-v8a | [下载 APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-Android-Mobile-arm64-v8a.apk) |
-| armeabi-v7a | [下载 APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-Android-Mobile-armeabi-v7a.apk) |
-| x86_64 | [下载 APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-Android-Mobile-x86_64.apk) |
-
-### Android TV 版
-| 架构 | 下载 |
-|------|------|
-| arm64-v8a | [下载 APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-AndroidTV-arm64-v8a.apk) |
-| armeabi-v7a | [下载 APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-AndroidTV-armeabi-v7a.apk) |
-| x86_64 | [下载 APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-AndroidTV-x86_64.apk) |
+### 支持平台
+- **Windows**: x64 安装包 (.exe)
+- **Android 手机**: APK (arm64-v8a, armeabi-v7a, x86_64)
+- **Android TV**: APK (arm64-v8a, armeabi-v7a, x86_64)
 
 ## 🎮 操作控制
 
@@ -101,12 +89,6 @@ Lotus IPTV 是一款基于 Flutter 开发的现代化高性能 IPTV 播放器。
 | 收藏 | F | 长按确认键 |
 | 静音 | M | - |
 | 退出播放器 | 双击 Esc | 双击返回键 |
-
-## 🆕 v1.1.82 更新内容
-
-- 新增 FPS 显示设置（默认开启）
-- 播放器右上角显示实时帧率
-- Windows 迷你模式 FPS 显示在右下角
 
 ## 🛠️ 开发构建
 

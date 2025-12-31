@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/shnulaa/FlutterIPTV/releases">
-    <img src="https://img.shields.io/badge/version-1.1.82-blue.svg" alt="Version">
+    <img src="https://img.shields.io/github/v/release/shnulaa/FlutterIPTV?include_prereleases" alt="Latest Release">
   </a>
   <a href="https://github.com/shnulaa/FlutterIPTV/actions/workflows/build-release.yml">
     <img src="https://github.com/shnulaa/FlutterIPTV/actions/workflows/build-release.yml/badge.svg" alt="Build Status">
@@ -71,24 +71,12 @@ Lotus IPTV is a modern, high-performance IPTV player built with Flutter. Feature
 
 ## 🚀 Download
 
-Download the latest version (v1.1.82) from [Releases Page](https://github.com/shnulaa/FlutterIPTV/releases/tag/v1.1.82).
+Download the latest version from [Releases Page](https://github.com/shnulaa/FlutterIPTV/releases/latest).
 
-### Windows
-- [Windows x64 Installer](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-Windows-x64-Setup.exe)
-
-### Android Mobile
-| Architecture | Download |
-|--------------|----------|
-| arm64-v8a | [Download APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-Android-Mobile-arm64-v8a.apk) |
-| armeabi-v7a | [Download APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-Android-Mobile-armeabi-v7a.apk) |
-| x86_64 | [Download APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-Android-Mobile-x86_64.apk) |
-
-### Android TV
-| Architecture | Download |
-|--------------|----------|
-| arm64-v8a | [Download APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-AndroidTV-arm64-v8a.apk) |
-| armeabi-v7a | [Download APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-AndroidTV-armeabi-v7a.apk) |
-| x86_64 | [Download APK](https://github.com/shnulaa/FlutterIPTV/releases/download/v1.1.82/flutteriptv-AndroidTV-x86_64.apk) |
+### Available Platforms
+- **Windows**: x64 Installer (.exe)
+- **Android Mobile**: APK for arm64-v8a, armeabi-v7a, x86_64
+- **Android TV**: APK for arm64-v8a, armeabi-v7a, x86_64
 
 ## 🎮 Controls
 
@@ -101,12 +89,6 @@ Download the latest version (v1.1.82) from [Releases Page](https://github.com/sh
 | Favorite | F | Long Press OK |
 | Mute | M | - |
 | Exit Player | Double Esc | Double Back |
-
-## 🆕 What's New in v1.1.82
-
-- Add FPS display setting (enabled by default)
-- Show real-time frame rate in player top-right corner
-- Windows mini mode shows FPS in bottom-right corner
 
 ## 🛠️ Development
 
