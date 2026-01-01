@@ -11,7 +11,10 @@ import 'service_locator.dart';
 
 class UpdateService {
   // 使用 GitHub Pages 静态文件，无请求次数限制
-  static const String _versionJsonUrl = 'https://shnulaa.github.io/FlutterIPTV/version.json';
+  // static const String _versionJsonUrl = 'https://shnulaa.github.io/FlutterIPTV/version.json';
+  // static const String _githubReleasesUrl = 'https://github.com/shnulaa/FlutterIPTV/releases';
+
+  static const String _versionJsonUrl = 'https://iptv.liuyanq.dpdns.org/version.json';
   static const String _githubReleasesUrl = 'https://github.com/shnulaa/FlutterIPTV/releases';
 
   // 检查更新的间隔时间（小时）
