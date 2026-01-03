@@ -23,6 +23,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _keyVolumeBoost = 'volume_boost';
   static const String _keyBufferStrength = 'buffer_strength'; // fast, balanced, stable
   static const String _keyShowFps = 'show_fps';
+  static const String _keyShowClock = 'show_clock';
+  static const String _keyShowNetworkSpeed = 'show_network_speed';
 
   // Settings values
   String _themeMode = 'dark';
@@ -45,6 +47,8 @@ class SettingsProvider extends ChangeNotifier {
   int _volumeBoost = 0; // -20 to +20 dB
   String _bufferStrength = 'fast'; // fast, balanced, stable
   bool _showFps = true; // 默认显示FPS
+  bool _showClock = true; // 默认显示时间
+  bool _showNetworkSpeed = true; // 默认显示网速
 
   // Getters
   String get themeMode => _themeMode;
@@ -66,6 +70,8 @@ class SettingsProvider extends ChangeNotifier {
   int get volumeBoost => _volumeBoost;
   String get bufferStrength => _bufferStrength;
   bool get showFps => _showFps;
+  bool get showClock => _showClock;
+  bool get showNetworkSpeed => _showNetworkSpeed;
 
   SettingsProvider() {
     _loadSettings();
@@ -99,6 +105,8 @@ class SettingsProvider extends ChangeNotifier {
     _volumeBoost = prefs.getInt(_keyVolumeBoost) ?? 0;
     _bufferStrength = prefs.getString(_keyBufferStrength) ?? 'fast';
     _showFps = prefs.getBool(_keyShowFps) ?? true;
+    _showClock = prefs.getBool(_keyShowClock) ?? true;
+    _showNetworkSpeed = prefs.getBool(_keyShowNetworkSpeed) ?? true;
     // 不在构造函数中调用 notifyListeners()，避免 build 期间触发重建
   }
 
@@ -137,6 +145,8 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setInt(_keyVolumeBoost, _volumeBoost);
     await prefs.setString(_keyBufferStrength, _bufferStrength);
     await prefs.setBool(_keyShowFps, _showFps);
+    await prefs.setBool(_keyShowClock, _showClock);
+    await prefs.setBool(_keyShowNetworkSpeed, _showNetworkSpeed);
   }
 
   // Setters with persistence
@@ -266,6 +276,18 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setShowClock(bool show) async {
+    _showClock = show;
+    await _saveSettings();
+    notifyListeners();
+  }
+
+  Future<void> setShowNetworkSpeed(bool show) async {
+    _showNetworkSpeed = show;
+    await _saveSettings();
+    notifyListeners();
+  }
+
   // Reset all settings to defaults
   Future<void> resetSettings() async {
     _themeMode = 'dark';
@@ -284,6 +306,8 @@ class SettingsProvider extends ChangeNotifier {
     _volumeBoost = 0;
     _bufferStrength = 'fast';
     _showFps = true;
+    _showClock = true;
+    _showNetworkSpeed = true;
 
     await _saveSettings();
     notifyListeners();

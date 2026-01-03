@@ -181,6 +181,8 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         final settingsProvider = context.read<SettingsProvider>();
         final bufferStrength = settingsProvider.bufferStrength;
         final showFps = settingsProvider.showFps;
+        final showClock = settingsProvider.showClock;
+        final showNetworkSpeed = settingsProvider.showNetworkSpeed;
 
         // Launch native player with channel list and callback for when it closes
         final launched = await NativePlayerChannel.launchPlayer(
@@ -194,12 +196,14 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
           isDlnaMode: isDlnaMode,
           bufferStrength: bufferStrength,
           showFps: showFps,
+          showClock: showClock,
+          showNetworkSpeed: showNetworkSpeed,
           onClosed: () {
             debugPrint('PlayerScreen: Native player closed callback');
             // 停止 DLNA 同步定时器
             _dlnaSyncTimer?.cancel();
             _dlnaSyncTimer = null;
-            
+
             // 通知 DLNA 播放已停止（如果是 DLNA 投屏的话）
             try {
               final dlnaProvider = context.read<DlnaProvider>();
@@ -209,7 +213,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
             } catch (e) {
               // 忽略错误
             }
-            
+
             if (mounted) {
               // 返回首页
               Navigator.of(context).popUntil((route) => route.isFirst);

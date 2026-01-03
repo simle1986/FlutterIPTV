@@ -121,6 +121,30 @@ class SettingsScreen extends StatelessWidget {
               _buildDivider(),
               _buildSwitchTile(
                 context,
+                title: '显示时间',
+                subtitle: '在播放器右上角显示当前时间',
+                icon: Icons.schedule_rounded,
+                value: settings.showClock,
+                onChanged: (value) {
+                  settings.setShowClock(value);
+                  _showSuccess(context, value ? '已启用时间显示' : '已关闭时间显示');
+                },
+              ),
+              _buildDivider(),
+              _buildSwitchTile(
+                context,
+                title: '显示网速',
+                subtitle: '在播放器右上角显示下行网速',
+                icon: Icons.network_check_rounded,
+                value: settings.showNetworkSpeed,
+                onChanged: (value) {
+                  settings.setShowNetworkSpeed(value);
+                  _showSuccess(context, value ? '已启用网速显示' : '已关闭网速显示');
+                },
+              ),
+              _buildDivider(),
+              _buildSwitchTile(
+                context,
                 title: AppStrings.of(context)?.volumeNormalization ?? 'Volume Normalization',
                 subtitle: '${AppStrings.of(context)?.volumeNormalizationSubtitle ?? 'Auto-adjust volume differences between channels'} (未实现)',
                 icon: Icons.volume_up_rounded,

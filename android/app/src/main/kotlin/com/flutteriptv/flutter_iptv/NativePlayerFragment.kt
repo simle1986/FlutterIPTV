@@ -70,11 +70,20 @@ class NativePlayerFragment : Fragment() {
     // FPS display
     private lateinit var fpsText: TextView
     private var showFps: Boolean = true
-    
+
     // Clock display
     private lateinit var clockText: TextView
+    private var showClock: Boolean = true
     private var clockUpdateRunnable: Runnable? = null
     private val CLOCK_UPDATE_INTERVAL = 1000L
+
+    // Network speed display
+    private lateinit var speedText: TextView
+    private var showNetworkSpeed: Boolean = true
+    private var networkSpeedUpdateRunnable: Runnable? = null
+    private val NETWORK_SPEED_UPDATE_INTERVAL = 1000L
+    private var lastBytesLoaded = 0L
+    private var lastSpeedUpdateTime = 0L
     
     // Source indicator
     private lateinit var sourceIndicator: View
@@ -152,6 +161,8 @@ class NativePlayerFragment : Fragment() {
         private const val ARG_IS_DLNA_MODE = "is_dlna_mode"
         private const val ARG_BUFFER_STRENGTH = "buffer_strength"
         private const val ARG_SHOW_FPS = "show_fps"
+        private const val ARG_SHOW_CLOCK = "show_clock"
+        private const val ARG_SHOW_NETWORK_SPEED = "show_network_speed"
 
         fun newInstance(
             videoUrl: String,
@@ -163,7 +174,9 @@ class NativePlayerFragment : Fragment() {
             channelSources: ArrayList<ArrayList<String>>? = null,
             isDlnaMode: Boolean = false,
             bufferStrength: String = "fast",
-            showFps: Boolean = true
+            showFps: Boolean = true,
+            showClock: Boolean = true,
+            showNetworkSpeed: Boolean = true
         ): NativePlayerFragment {
             return NativePlayerFragment().apply {
                 arguments = Bundle().apply {
@@ -177,6 +190,8 @@ class NativePlayerFragment : Fragment() {
                     putBoolean(ARG_IS_DLNA_MODE, isDlnaMode)
                     putString(ARG_BUFFER_STRENGTH, bufferStrength)
                     putBoolean(ARG_SHOW_FPS, showFps)
+                    putBoolean(ARG_SHOW_CLOCK, showClock)
+                    putBoolean(ARG_SHOW_NETWORK_SPEED, showNetworkSpeed)
                 }
             }
         }
@@ -204,6 +219,8 @@ class NativePlayerFragment : Fragment() {
             isDlnaMode = it.getBoolean(ARG_IS_DLNA_MODE, false)
             bufferStrength = it.getString(ARG_BUFFER_STRENGTH, "fast") ?: "fast"
             showFps = it.getBoolean(ARG_SHOW_FPS, true)
+            showClock = it.getBoolean(ARG_SHOW_CLOCK, true)
+            showNetworkSpeed = it.getBoolean(ARG_SHOW_NETWORK_SPEED, true)
             currentSourceIndex = 0 // 初始化为第一个源
         }
         
@@ -248,6 +265,9 @@ class NativePlayerFragment : Fragment() {
         
         // Clock display
         clockText = view.findViewById(R.id.clock_text)
+
+        // Network speed display
+        speedText = view.findViewById(R.id.speed_text)
         
         // Source indicator
         sourceIndicator = view.findViewById(R.id.source_indicator)
@@ -301,6 +321,9 @@ class NativePlayerFragment : Fragment() {
         
         // Start clock update
         startClockUpdate()
+
+        // Start network speed update
+        startNetworkSpeedUpdate()
         
         showControls()
     }
@@ -1034,6 +1057,70 @@ class NativePlayerFragment : Fragment() {
         activity?.runOnUiThread {
             val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
             clockText.text = sdf.format(java.util.Date())
+            // 根据设置显示/隐藏时钟
+            clockText.visibility = if (showClock) View.VISIBLE else View.GONE
+        }
+    }
+
+    // Network speed update
+    private fun startNetworkSpeedUpdate() {
+        stopNetworkSpeedUpdate()
+        lastBytesLoaded = 0L
+        lastSpeedUpdateTime = System.currentTimeMillis()
+
+        networkSpeedUpdateRunnable = Runnable {
+            updateNetworkSpeed()
+            handler.postDelayed(networkSpeedUpdateRunnable!!, NETWORK_SPEED_UPDATE_INTERVAL)
+        }
+        handler.postDelayed(networkSpeedUpdateRunnable!!, NETWORK_SPEED_UPDATE_INTERVAL)
+    }
+
+    private fun stopNetworkSpeedUpdate() {
+        networkSpeedUpdateRunnable?.let { handler.removeCallbacks(it) }
+        networkSpeedUpdateRunnable = null
+    }
+
+    private fun updateNetworkSpeed() {
+        val p = player ?: return
+
+        if (!p.isPlaying) {
+            lastSpeedUpdateTime = System.currentTimeMillis()
+            lastBytesLoaded = 0L
+            speedText.visibility = View.GONE
+            return
+        }
+
+        val currentTime = System.currentTimeMillis()
+        val timeDelta = currentTime - lastSpeedUpdateTime
+
+        if (timeDelta < 800) return
+
+        try {
+            // 从 ExoPlayer 的 LoadControl 获取已加载的字节数
+            val currentBytes = p.totalBufferedBytes
+
+            if (lastBytesLoaded > 0 && currentBytes > lastBytesLoaded) {
+                val bytesDelta = currentBytes - lastBytesLoaded
+                val speedBytesPerSecond = bytesDelta * 1000f / timeDelta
+                val speedKbps = speedBytesPerSecond / 1024f // KB/s
+                val speedMbps = speedKbps / 1024f // MB/s
+
+                val speedText = when {
+                    speedMbps >= 1.0f -> "%.2f MB/s".format(speedMbps)
+                    speedKbps >= 1.0f -> "%.0f KB/s".format(speedKbps)
+                    else -> "%.0f B/s".format(speedBytesPerSecond)
+                }
+
+                activity?.runOnUiThread {
+                    this.speedText.text = speedText
+                    this.speedText.visibility = if (showNetworkSpeed) View.VISIBLE else View.GONE
+                }
+            }
+
+            lastBytesLoaded = currentBytes
+            lastSpeedUpdateTime = currentTime
+        } catch (e: Exception) {
+            Log.d(TAG, "Failed to update network speed: ${e.message}")
         }
     }
     
@@ -1398,6 +1485,7 @@ class NativePlayerFragment : Fragment() {
         stopProgressUpdate() // 停止进度更新
         stopFpsCalculation() // 停止 FPS 计算
         stopClockUpdate() // 停止时钟更新
+        stopNetworkSpeedUpdate() // 停止网速更新
         player?.release()
         player = null
         activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
