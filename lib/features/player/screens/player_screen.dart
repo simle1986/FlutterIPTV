@@ -145,6 +145,10 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         // 获取频道列表
         final channelProvider = context.read<ChannelProvider>();
         final channels = channelProvider.channels;
+        
+        // 设置 providers 用于收藏功能
+        final favoritesProvider = context.read<FavoritesProvider>();
+        NativePlayerChannel.setProviders(favoritesProvider, channelProvider);
 
         // DLNA 模式下不使用频道列表，直接播放传入的 URL
         List<String> urls;

@@ -92,6 +92,16 @@
                 android:maxLines="1"
                 android:ellipsize="end" />
 
+            <!-- Favorite Icon -->
+            <ImageView
+                android:id="@+id/favorite_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="8dp"
+                android:src="@android:drawable/btn_star_big_on"
+                android:visibility="gone"
+                android:contentDescription="Favorite" />
+
             <!-- Source Indicator (after channel name) -->
             <LinearLayout
                 android:id="@+id/source_indicator"

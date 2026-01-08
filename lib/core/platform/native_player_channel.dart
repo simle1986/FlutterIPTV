@@ -2,12 +2,22 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'platform_detector.dart';
 import '../services/epg_service.dart';
+import '../../features/favorites/providers/favorites_provider.dart';
+import '../../features/channels/providers/channel_provider.dart';
 
 /// Service to launch native Android player via MethodChannel
 class NativePlayerChannel {
   static const _channel = MethodChannel('com.flutteriptv/native_player');
   static bool _initialized = false;
   static Function? _onPlayerClosedCallback;
+  static FavoritesProvider? _favoritesProvider;
+  static ChannelProvider? _channelProvider;
+
+  /// Set providers for favorite functionality
+  static void setProviders(FavoritesProvider favoritesProvider, ChannelProvider channelProvider) {
+    _favoritesProvider = favoritesProvider;
+    _channelProvider = channelProvider;
+  }
 
   /// Initialize the channel
   static void init() {
@@ -25,6 +35,14 @@ class NativePlayerChannel {
         final channelName = call.arguments['channelName'] as String?;
         final epgId = call.arguments['epgId'] as String?;
         return _getEpgInfo(epgId, channelName);
+      } else if (call.method == 'toggleFavorite') {
+        // Native player requests to toggle favorite
+        final channelIndex = call.arguments['channelIndex'] as int?;
+        return _toggleFavorite(channelIndex);
+      } else if (call.method == 'isFavorite') {
+        // Native player requests to check if channel is favorite
+        final channelIndex = call.arguments['channelIndex'] as int?;
+        return _isFavorite(channelIndex);
       }
     });
   }
@@ -41,6 +59,67 @@ class NativePlayerChannel {
       'currentRemaining': currentProgram?.remainingMinutes,
       'nextTitle': nextProgram?.title,
     };
+  }
+
+  static Future<bool?> _toggleFavorite(int? channelIndex) async {
+    if (channelIndex == null || _favoritesProvider == null || _channelProvider == null) {
+      debugPrint('NativePlayerChannel: toggleFavorite - invalid params: index=$channelIndex, favProv=${_favoritesProvider != null}, chanProv=${_channelProvider != null}');
+      return null;
+    }
+    
+    final channels = _channelProvider!.channels;
+    if (channelIndex < 0 || channelIndex >= channels.length) {
+      debugPrint('NativePlayerChannel: toggleFavorite - invalid index: $channelIndex, channels=${channels.length}');
+      return null;
+    }
+    
+    final channel = channels[channelIndex];
+    debugPrint('NativePlayerChannel: toggleFavorite - channel: ${channel.name}, id: ${channel.id}');
+    
+    if (channel.id == null) {
+      debugPrint('NativePlayerChannel: toggleFavorite - channel has no id');
+      return null;
+    }
+    
+    // Check current favorite status before toggle
+    final wasFavorite = _favoritesProvider!.isFavorite(channel.id!);
+    debugPrint('NativePlayerChannel: toggleFavorite - wasFavorite: $wasFavorite');
+    
+    // Toggle favorite
+    final success = await _favoritesProvider!.toggleFavorite(channel);
+    debugPrint('NativePlayerChannel: toggleFavorite - success: $success');
+    
+    if (!success) {
+      return null;
+    }
+    
+    // Return the new favorite status (opposite of what it was)
+    final isFavoriteNow = !wasFavorite;
+    debugPrint('NativePlayerChannel: toggleFavorite - isFavoriteNow: $isFavoriteNow');
+    return isFavoriteNow;
+  }
+
+  static bool _isFavorite(int? channelIndex) {
+    if (channelIndex == null || _favoritesProvider == null || _channelProvider == null) {
+      debugPrint('NativePlayerChannel: isFavorite - invalid params: index=$channelIndex, favProv=${_favoritesProvider != null}, chanProv=${_channelProvider != null}');
+      return false;
+    }
+    
+    final channels = _channelProvider!.channels;
+    if (channelIndex < 0 || channelIndex >= channels.length) {
+      debugPrint('NativePlayerChannel: isFavorite - invalid index: $channelIndex, channels=${channels.length}');
+      return false;
+    }
+    
+    final channel = channels[channelIndex];
+    if (channel.id == null) {
+      debugPrint('NativePlayerChannel: isFavorite - channel has no id');
+      return false;
+    }
+    
+    final isFav = _favoritesProvider!.isFavorite(channel.id!);
+    debugPrint('NativePlayerChannel: isFavorite - channel: ${channel.name}, isFavorite: $isFav');
+    return isFav;
   }
 
   /// Check if native player is available (Android TV only)

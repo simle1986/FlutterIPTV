@@ -10,6 +10,8 @@ import '../../../core/widgets/category_card.dart';
 import '../../../core/widgets/channel_card.dart';
 import '../../../core/platform/platform_detector.dart';
 import '../../../core/i18n/app_strings.dart';
+import '../../../core/services/update_service.dart';
+import '../../../core/models/app_update.dart';
 import '../../channels/providers/channel_provider.dart';
 import '../../playlist/providers/playlist_provider.dart';
 import '../../favorites/providers/favorites_provider.dart';
@@ -31,17 +33,35 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _lastPlaylistId; // 跟踪上次的播放列表ID
   int _lastChannelCount = 0; // 跟踪上次的频道数量
   String _appVersion = '';
+  AppUpdate? _availableUpdate; // 可用的更新
 
   @override
   void initState() {
     super.initState();
     _loadData();
     _loadVersion();
+    _checkForUpdates();
     // 监听频道变化
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChannelProvider>().addListener(_onChannelProviderChanged);
       context.read<PlaylistProvider>().addListener(_onPlaylistProviderChanged);
+      context.read<FavoritesProvider>().addListener(_onFavoritesProviderChanged);
     });
+  }
+
+  Future<void> _checkForUpdates() async {
+    try {
+      final updateService = UpdateService();
+      // 启动时强制检查一次更新（忽略24小时限制）
+      final update = await updateService.checkForUpdates(forceCheck: true);
+      if (mounted && update != null) {
+        setState(() {
+          _availableUpdate = update;
+        });
+      }
+    } catch (e) {
+      // 静默失败，不影响用户体验
+    }
   }
 
   Future<void> _loadVersion() async {
@@ -99,6 +119,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _onFavoritesProviderChanged() {
+    if (!mounted) return;
+    // 收藏状态变化时刷新推荐频道
+    _refreshRecommendedChannels();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -126,12 +152,30 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     final channelProvider = context.read<ChannelProvider>();
+    final favoritesProvider = context.read<FavoritesProvider>();
+    
     if (channelProvider.channels.isEmpty) return;
 
-    // 随机打乱频道顺序，显示数量由 _buildChannelRow 根据宽度自动计算
-    final shuffled = List<Channel>.from(channelProvider.channels)..shuffle();
-    // 最多取20个作为候选，实际显示数量由宽度决定
-    _recommendedChannels = shuffled.take(20).toList();
+    // 分离收藏和非收藏频道
+    final favoriteChannels = <Channel>[];
+    final nonFavoriteChannels = <Channel>[];
+    
+    for (final channel in channelProvider.channels) {
+      if (favoritesProvider.isFavorite(channel.id ?? 0)) {
+        favoriteChannels.add(channel);
+      } else {
+        nonFavoriteChannels.add(channel);
+      }
+    }
+    
+    // 打乱非收藏频道顺序
+    nonFavoriteChannels.shuffle();
+    
+    // 优先显示收藏频道，不够再补充非收藏频道
+    _recommendedChannels = [
+      ...favoriteChannels,
+      ...nonFavoriteChannels,
+    ].take(20).toList();
 
     setState(() {});
   }
@@ -325,7 +369,36 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Text('Lotus IPTV', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
                       const SizedBox(width: 8),
-                      Text('v${_appVersion}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: Colors.white70)),
+                      Text('v$_appVersion', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: Colors.white70)),
+                      if (_availableUpdate != null) ...[
+                        const SizedBox(width: 8),
+                        TVFocusable(
+                          onSelect: () => Navigator.pushNamed(context, AppRouter.settings),
+                          focusScale: 1.0,
+                          showFocusBorder: false,
+                          builder: (context, isFocused, child) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                gradient: isFocused ? AppTheme.lotusGradient : LinearGradient(
+                                  colors: [Colors.orange.shade600, Colors.deepOrange.shade600],
+                                ),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                                border: isFocused ? Border.all(color: AppTheme.focusBorderColor, width: 2) : null,
+                              ),
+                              child: child,
+                            );
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.system_update_rounded, size: 10, color: Colors.white),
+                              const SizedBox(width: 3),
+                              Text('v${_availableUpdate!.version}', style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

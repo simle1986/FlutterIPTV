@@ -88,6 +88,10 @@ class NativePlayerFragment : Fragment() {
     private var leftKeyDownTime = 0L
     private val LONG_PRESS_THRESHOLD = 500L // 500ms for long press
     private var longPressHandled = false // 防止长按后继续触发
+    
+    // Long press detection for center/enter key (favorite)
+    private var centerKeyDownTime = 0L
+    private var centerLongPressHandled = false
 
     private var currentUrl: String = ""
     private var currentName: String = ""
@@ -153,6 +157,10 @@ class NativePlayerFragment : Fragment() {
     // Video info display
     private lateinit var resolutionText: TextView
     private var showVideoInfo: Boolean = true
+    
+    // Favorite icon
+    private lateinit var favoriteIcon: ImageView
+    private var isFavorite: Boolean = false
     
     var onCloseListener: (() -> Unit)? = null
 
@@ -282,6 +290,9 @@ class NativePlayerFragment : Fragment() {
         // Video info display (resolution + bitrate)
         resolutionText = view.findViewById(R.id.resolution_text)
         
+        // Favorite icon
+        favoriteIcon = view.findViewById(R.id.favorite_icon)
+        
         // Source indicator
         sourceIndicator = view.findViewById(R.id.source_indicator)
         sourceText = view.findViewById(R.id.source_text)
@@ -337,6 +348,9 @@ class NativePlayerFragment : Fragment() {
 
         // Start network speed update
         startNetworkSpeedUpdate()
+        
+        // Check initial favorite status
+        checkInitialFavoriteStatus()
         
         showControls()
     }
@@ -721,9 +735,21 @@ class NativePlayerFragment : Fragment() {
             }
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                 if (!categoryPanelVisible) {
-                    showControls()
-                    player?.let {
-                        if (it.isPlaying) it.pause() else it.play()
+                    // 长按已处理，忽略后续事件
+                    if (centerLongPressHandled) {
+                        return true
+                    }
+                    // 记录按下时间
+                    if (event.repeatCount == 0) {
+                        centerKeyDownTime = System.currentTimeMillis()
+                        centerLongPressHandled = false
+                    }
+                    // 检测长按 - 添加/移除收藏
+                    if (event.repeatCount > 0 && !centerLongPressHandled && 
+                        System.currentTimeMillis() - centerKeyDownTime >= LONG_PRESS_THRESHOLD) {
+                        centerLongPressHandled = true
+                        toggleFavorite()
+                        return true
                     }
                 }
                 return true
@@ -815,6 +841,34 @@ class NativePlayerFragment : Fragment() {
     
     private fun handleKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                // 重置长按标志
+                val wasLongPressHandled = centerLongPressHandled
+                centerLongPressHandled = false
+                
+                // 如果是长按触发的，不再处理
+                if (wasLongPressHandled) {
+                    centerKeyDownTime = 0L
+                    return true
+                }
+                
+                // 分类面板可见时不处理
+                if (categoryPanelVisible) {
+                    centerKeyDownTime = 0L
+                    return true
+                }
+                
+                // 短按 - 播放/暂停
+                val pressDuration = System.currentTimeMillis() - centerKeyDownTime
+                if (centerKeyDownTime > 0 && pressDuration < LONG_PRESS_THRESHOLD) {
+                    showControls()
+                    player?.let {
+                        if (it.isPlaying) it.pause() else it.play()
+                    }
+                }
+                centerKeyDownTime = 0L
+                return true
+            }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
                 // 重置长按标志
                 val wasLongPressHandled = longPressHandled
@@ -1227,6 +1281,10 @@ class NativePlayerFragment : Fragment() {
         val sources = getCurrentSources()
         val urlToPlay = if (sources.isNotEmpty()) sources[0] else currentUrl
         playUrl(urlToPlay)
+        
+        // 检查新频道的收藏状态
+        checkInitialFavoriteStatus()
+        
         showControls()
     }
     
@@ -1432,6 +1490,45 @@ class NativePlayerFragment : Fragment() {
             String.format("%d:%02d:%02d", hours, minutes, seconds)
         } else {
             String.format("%02d:%02d", minutes, seconds)
+        }
+    }
+    
+    private fun toggleFavorite() {
+        if (currentIndex < 0 || isDlnaMode) return
+        
+        val activity = activity as? MainActivity ?: return
+        activity.toggleFavorite(currentIndex) { newFavoriteStatus ->
+            activity.runOnUiThread {
+                if (newFavoriteStatus != null) {
+                    isFavorite = newFavoriteStatus
+                    updateFavoriteIcon()
+                    val message = if (newFavoriteStatus) {
+                        "已添加到收藏夹"
+                    } else {
+                        "已从收藏夹移除"
+                    }
+                    android.widget.Toast.makeText(requireContext(), message, android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    android.widget.Toast.makeText(requireContext(), "操作失败", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+    
+    private fun updateFavoriteIcon() {
+        favoriteIcon.visibility = if (isFavorite) View.VISIBLE else View.GONE
+    }
+    
+    private fun checkInitialFavoriteStatus() {
+        if (currentIndex < 0 || isDlnaMode) return
+        
+        val activity = activity as? MainActivity ?: return
+        activity.isFavorite(currentIndex) { favoriteStatus ->
+            activity.runOnUiThread {
+                isFavorite = favoriteStatus
+                updateFavoriteIcon()
+                Log.d(TAG, "Initial favorite status: $isFavorite for channel index $currentIndex")
+            }
         }
     }
     

@@ -335,6 +335,56 @@ class MainActivity: FlutterFragmentActivity() {
     }
     
     /**
+     * Toggle favorite status for a channel from native player
+     */
+    fun toggleFavorite(channelIndex: Int, callback: (Boolean?) -> Unit) {
+        playerMethodChannel?.invokeMethod(
+            "toggleFavorite",
+            mapOf("channelIndex" to channelIndex),
+            object : MethodChannel.Result {
+                override fun success(result: Any?) {
+                    callback(result as? Boolean)
+                }
+                
+                override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+                    Log.e(TAG, "toggleFavorite error: $errorCode - $errorMessage")
+                    callback(null)
+                }
+                
+                override fun notImplemented() {
+                    Log.w(TAG, "toggleFavorite not implemented")
+                    callback(null)
+                }
+            }
+        )
+    }
+    
+    /**
+     * Check if a channel is favorite
+     */
+    fun isFavorite(channelIndex: Int, callback: (Boolean) -> Unit) {
+        playerMethodChannel?.invokeMethod(
+            "isFavorite",
+            mapOf("channelIndex" to channelIndex),
+            object : MethodChannel.Result {
+                override fun success(result: Any?) {
+                    callback(result as? Boolean ?: false)
+                }
+                
+                override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+                    Log.e(TAG, "isFavorite error: $errorCode - $errorMessage")
+                    callback(false)
+                }
+                
+                override fun notImplemented() {
+                    Log.w(TAG, "isFavorite not implemented")
+                    callback(false)
+                }
+            }
+        )
+    }
+    
+    /**
      * Install APK file using FileProvider
      */
     private fun installApk(filePath: String) {
