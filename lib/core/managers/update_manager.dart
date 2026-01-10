@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' show Platform, Process, ProcessStartMode, exit;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/app_update.dart';
@@ -118,7 +119,10 @@ class UpdateManager {
         Navigator.of(context).pop();
       }
 
-      if (Platform.isAndroid) {
+      if (kIsWeb) {
+        // Web 端直接打开下载页面
+        await _updateService.openDownloadPage();
+      } else if (Platform.isAndroid) {
         await _downloadAndInstallAndroid(context, update);
       } else if (Platform.isWindows) {
         await _downloadAndInstallWindows(context, update);
@@ -348,10 +352,12 @@ class UpdateManager {
                   onPressed: () async {
                     Navigator.of(ctx).pop();
                     debugPrint('UPDATE_MANAGER: 启动安装程序: ${file.path}');
-                    // 启动安装程序
-                    await Process.start(file.path, [], mode: ProcessStartMode.detached);
-                    // 退出当前应用
-                    exit(0);
+                    // 启动安装程序 (Web 端不支持)
+                    if (!kIsWeb) {
+                      await Process.start(file.path, [], mode: ProcessStartMode.detached);
+                      // 退出当前应用
+                      exit(0);
+                    }
                   },
                   child: const Text('立即安装'),
                 ),
@@ -360,8 +366,10 @@ class UpdateManager {
           );
         } else {
           debugPrint('UPDATE_MANAGER: context not mounted, 直接启动安装');
-          await Process.start(file.path, [], mode: ProcessStartMode.detached);
-          exit(0);
+          if (!kIsWeb) {
+            await Process.start(file.path, [], mode: ProcessStartMode.detached);
+            exit(0);
+          }
         }
       } else {
         throw Exception('下载失败');

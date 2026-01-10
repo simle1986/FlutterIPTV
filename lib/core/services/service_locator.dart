@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+import 'dart:io' show Directory;
+import 'package:flutter/foundation.dart';
 
 import '../database/database_helper.dart';
 import '../platform/platform_detector.dart';
@@ -30,8 +31,10 @@ class ServiceLocator {
   }
 
   static Future<void> initDatabase() async {
-    // Initialize app directory
-    _appDir = await getApplicationDocumentsDirectory();
+    // Initialize app directory (not needed on Web)
+    if (!kIsWeb) {
+      _appDir = await getApplicationDocumentsDirectory();
+    }
 
     // Initialize database
     _database = DatabaseHelper();

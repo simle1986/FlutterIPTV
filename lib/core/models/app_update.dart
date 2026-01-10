@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../platform/platform_detector.dart';
@@ -32,7 +32,7 @@ class AppUpdate {
     final changelog = json['changelog'] as Map<String, dynamic>? ?? {};
     
     // 根据当前语言选择更新日志，默认中文
-    final locale = Platform.localeName.startsWith('zh') ? 'zh' : 'en';
+    final locale = kIsWeb ? 'en' : (Platform.localeName.startsWith('zh') ? 'zh' : 'en');
     final releaseNotes = changelog[locale] ?? changelog['zh'] ?? changelog['en'] ?? '';
     
     // 根据平台和架构选择下载链接
@@ -55,7 +55,7 @@ class AppUpdate {
     final changelog = json['changelog'] as Map<String, dynamic>? ?? {};
     
     // 根据当前语言选择更新日志，默认中文
-    final locale = Platform.localeName.startsWith('zh') ? 'zh' : 'en';
+    final locale = kIsWeb ? 'en' : (Platform.localeName.startsWith('zh') ? 'zh' : 'en');
     final releaseNotes = changelog[locale] ?? changelog['zh'] ?? changelog['en'] ?? '';
     
     // 根据平台和架构选择下载链接（同步版本）
@@ -89,6 +89,11 @@ class AppUpdate {
 
   /// 根据平台和架构获取下载链接（异步）
   static Future<String> _getDownloadUrl(Map<String, dynamic> assets) async {
+    if (kIsWeb) {
+      // Web 端不支持下载，返回空字符串
+      return '';
+    }
+    
     if (Platform.isWindows) {
       return assets['windows'] ?? '';
     }
@@ -116,6 +121,11 @@ class AppUpdate {
 
   /// 根据平台和架构获取下载链接（同步，使用缓存）
   static String _getDownloadUrlSync(Map<String, dynamic> assets) {
+    if (kIsWeb) {
+      // Web 端不支持下载，返回空字符串
+      return '';
+    }
+    
     if (Platform.isWindows) {
       return assets['windows'] ?? '';
     }
@@ -144,7 +154,7 @@ class AppUpdate {
 
   /// 预加载 CPU 架构（应用启动时调用）
   static Future<void> preloadCpuArch() async {
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       await _getAndroidArch();
     }
   }

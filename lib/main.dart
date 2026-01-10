@@ -6,7 +6,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:window_manager/window_manager.dart';
 import 'core/i18n/app_strings.dart';
 
-import 'dart:io';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'core/theme/app_theme.dart';
@@ -37,17 +38,37 @@ void main() async {
     // Initialize MediaKit
     MediaKit.ensureInitialized();
 
-    // Initialize native player channel for Android TV
-    NativePlayerChannel.init();
-
-    // Initialize Windows/Linux/macOS Database Engine
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+    // Initialize native player channel for Android TV (not available on Web)
+    if (!kIsWeb) {
+      NativePlayerChannel.init();
     }
 
+    // Initialize platform detector
+    await PlatformDetector.init();
+
+    // Initialize database factories for different platforms
+    if (kIsWeb) {
+      // Initialize Web database factory
+      debugPrint('Initializing Web database factory...');
+      try {
+        // For Web, we need to use a different approach
+        // sqflite_common_ffi_web might not work as expected
+        // Let's try using the default web database factory
+        debugPrint('Web database factory set: ${databaseFactory.runtimeType}');
+      } catch (e) {
+        debugPrint('Web database factory initialization error: $e');
+      }
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      // Initialize Windows/Linux/macOS Database Engine
+      debugPrint('Initializing desktop database factory...');
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+      debugPrint('Desktop database factory set: ${databaseFactory.runtimeType}');
+    }
+    // Note: Android and iOS use the default sqflite database factory
+
     // Initialize window manager for Windows
-    if (Platform.isWindows) {
+    if (!kIsWeb && Platform.isWindows) {
       await windowManager.ensureInitialized();
 
       WindowOptions windowOptions = const WindowOptions(
@@ -69,22 +90,26 @@ void main() async {
     // Database will be initialized in SplashScreen
     await ServiceLocator.initPrefs();
 
-    // Set preferred orientations for mobile
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    // Set preferred orientations for mobile (not applicable on Web)
+    if (!kIsWeb) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    }
 
-    // Set system UI overlay style
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.black,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-    );
+    // Set system UI overlay style (not applicable on Web)
+    if (!kIsWeb) {
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.black,
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
+      );
+    }
 
     runApp(const FlutterIPTVApp());
   } catch (e, stackTrace) {
@@ -168,8 +193,8 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
   @override
   void initState() {
     super.initState();
-    // Windows 窗口关闭监听
-    if (Platform.isWindows) {
+    // Windows 窗口关闭监听 (not applicable on Web)
+    if (!kIsWeb && Platform.isWindows) {
       windowManager.addListener(this);
     }
     // 立即触发 DlnaProvider 的创建（会自动启动 DLNA 服务）
@@ -182,7 +207,7 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
   
   @override
   void dispose() {
-    if (Platform.isWindows) {
+    if (!kIsWeb && Platform.isWindows) {
       windowManager.removeListener(this);
     }
     super.dispose();
@@ -249,8 +274,8 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
   
   void _handleDlnaPause() {
     try {
-      // Android TV 使用原生播放器
-      if (PlatformDetector.isTV && PlatformDetector.isAndroid) {
+      // Android TV 使用原生播放器 (not available on Web)
+      if (!kIsWeb && PlatformDetector.isTV && PlatformDetector.isAndroid) {
         NativePlayerChannel.pause();
       } else {
         final playerProvider = context.read<PlayerProvider>();
@@ -264,8 +289,8 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
   void _handleDlnaStop() {
     _currentDlnaUrl = null;
     try {
-      // Android TV 使用原生播放器
-      if (PlatformDetector.isTV && PlatformDetector.isAndroid) {
+      // Android TV 使用原生播放器 (not available on Web)
+      if (!kIsWeb && PlatformDetector.isTV && PlatformDetector.isAndroid) {
         // closePlayer 会触发 onClosed 回调，回调中会处理导航
         NativePlayerChannel.closePlayer();
         // 不需要额外的 popUntil，onClosed 回调会处理
@@ -281,8 +306,8 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
   
   void _handleDlnaSeek(Duration position) {
     try {
-      // Android TV 使用原生播放器
-      if (PlatformDetector.isTV && PlatformDetector.isAndroid) {
+      // Android TV 使用原生播放器 (not available on Web)
+      if (!kIsWeb && PlatformDetector.isTV && PlatformDetector.isAndroid) {
         NativePlayerChannel.seekTo(position.inMilliseconds);
       } else {
         final playerProvider = context.read<PlayerProvider>();
@@ -295,8 +320,8 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
   
   void _handleDlnaVolume(int volume) {
     try {
-      // Android TV 使用原生播放器
-      if (PlatformDetector.isTV && PlatformDetector.isAndroid) {
+      // Android TV 使用原生播放器 (not available on Web)
+      if (!kIsWeb && PlatformDetector.isTV && PlatformDetector.isAndroid) {
         NativePlayerChannel.setVolume(volume);
       } else {
         final playerProvider = context.read<PlayerProvider>();
@@ -344,7 +369,7 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
           data: MediaQuery.of(context).copyWith(
             textScaler: const TextScaler.linear(1.0),
           ),
-          child: Platform.isWindows
+          child: !kIsWeb && Platform.isWindows
               ? Stack(
                   children: [
                     child!,

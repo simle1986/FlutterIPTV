@@ -24,6 +24,12 @@ class NativePlayerChannel {
     if (_initialized) return;
     _initialized = true;
 
+    // Web 端不支持原生播放器，跳过初始化
+    if (kIsWeb) {
+      debugPrint('NativePlayerChannel: Web platform detected, skipping native player initialization');
+      return;
+    }
+
     // Listen for player closed event from native
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onPlayerClosed') {
@@ -124,6 +130,8 @@ class NativePlayerChannel {
 
   /// Check if native player is available (Android TV only)
   static Future<bool> isAvailable() async {
+    // Web 端不支持原生播放器
+    if (kIsWeb) return false;
     if (!PlatformDetector.isAndroid) return false;
 
     try {

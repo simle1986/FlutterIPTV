@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/channel.dart';
+import '../services/service_locator.dart';
 
 /// Result of M3U parsing containing channels and metadata
 class M3UParseResult {
@@ -29,6 +30,12 @@ class M3UParser {
   static Future<List<Channel>> parseFromUrl(String url, int playlistId) async {
     try {
       debugPrint('DEBUG: 开始从URL获取播放列表内容: $url');
+
+      if (kIsWeb) {
+        // For Web, try using a CORS proxy or show instructions to user
+        debugPrint('DEBUG: Web平台检测到，尝试使用CORS代理');
+        return await _parseFromUrlWeb(url, playlistId);
+      }
 
       // Use Dio for better handling of large files and redirects
       final dio = Dio();
@@ -65,8 +72,32 @@ class M3UParser {
         errorMsg = 'Network connection failed';
       } else if (errorStr.contains('certificate') || errorStr.contains('ssl')) {
         errorMsg = 'SSL certificate error';
+      } else if (kIsWeb && errorStr.contains('cors')) {
+        errorMsg = 'CORS error - Web platform cannot access this URL directly';
       }
       throw Exception(errorMsg);
+    }
+  }
+
+  /// Web-specific URL parsing with backend API
+  static Future<List<Channel>> _parseFromUrlWeb(String url, int playlistId) async {
+    try {
+      debugPrint('DEBUG: Web使用后端API获取M3U内容');
+      
+      // Import the service locator to get the database helper
+      final dbHelper = ServiceLocator.database;
+      final webApi = dbHelper.webApi;
+      
+      final content = await webApi.fetchM3UContent(url);
+      debugPrint('DEBUG: Web后端API成功获取内容，大小: ${content.length} 字符');
+      
+      final channels = parse(content, playlistId);
+      debugPrint('DEBUG: Web API解析完成，共解析出 ${channels.length} 个频道');
+      
+      return channels;
+    } catch (e) {
+      debugPrint('DEBUG: Web API获取失败: $e');
+      throw Exception('Web平台无法访问此URL: $e');
     }
   }
 

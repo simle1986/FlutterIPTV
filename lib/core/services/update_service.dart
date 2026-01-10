@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show File, Platform;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -129,6 +129,12 @@ class UpdateService {
 
   /// 下载更新文件
   Future<File?> downloadUpdate(AppUpdate update, {Function(double)? onProgress}) async {
+    // Web 端不支持文件下载，直接返回 null
+    if (kIsWeb) {
+      debugPrint('UPDATE: Web 端不支持文件下载');
+      return null;
+    }
+
     try {
       final downloadUrl = update.downloadUrl;
       if (downloadUrl.isEmpty) {

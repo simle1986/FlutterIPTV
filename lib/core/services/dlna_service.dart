@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show RawDatagramSocket, HttpServer, InternetAddress, NetworkInterface, SocketException, Platform, Datagram, HttpRequest, InternetAddressType, RawSocketEvent, HttpDate, HttpClient, ContentType;
 import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
@@ -55,6 +55,12 @@ class DlnaService {
   /// 启动 DLNA 服务
   Future<bool> start({String? customName}) async {
     if (_isRunning) return true;
+
+    // Web 端不支持 DLNA 服务（需要网络套接字）
+    if (kIsWeb) {
+      debugPrint('DLNA: Web 端不支持 DLNA 服务');
+      return false;
+    }
 
     try {
       // 生成设备 UUID
@@ -168,7 +174,11 @@ USN: $_deviceUuid::urn:schemas-upnp-org:device:MediaRenderer:1\r
   Future<void> _generateDeviceUuid() async {
     try {
       final deviceInfo = DeviceInfoPlugin();
-      if (Platform.isAndroid) {
+      if (kIsWeb) {
+        final info = await deviceInfo.webBrowserInfo;
+        _deviceUuid = 'uuid:web-${info.browserName}-lotus-iptv';
+        _deviceName = 'Lotus IPTV (${info.browserName})';
+      } else if (Platform.isAndroid) {
         final info = await deviceInfo.androidInfo;
         _deviceUuid = 'uuid:${info.id}-lotus-iptv';
         _deviceName = 'Lotus IPTV (${info.model})';
