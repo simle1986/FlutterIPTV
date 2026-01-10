@@ -182,9 +182,15 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
             echo "TAG=v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
+            echo "CREATE_RELEASE=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
             echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "CREATE_RELEASE=true" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=dev-build" >> $GITHUB_OUTPUT
+            echo "TAG=dev-build" >> $GITHUB_OUTPUT
+            echo "CREATE_RELEASE=false" >> $GITHUB_OUTPUT
           fi
       
       - name: Generate Release Notes
@@ -233,6 +239,7 @@ jobs:
           EOF
       
       - name: Create Release
+        if: steps.version.outputs.CREATE_RELEASE == 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.version.outputs.TAG }}
@@ -250,3 +257,10 @@ jobs:
             release-assets/android-release/flutteriptv-AndroidTV-x86_64.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Complete (No Release)
+        if: steps.version.outputs.CREATE_RELEASE == 'false'
+        run: |
+          echo "✅ Build completed successfully!"
+          echo "📦 Artifacts created but no release published (branch push)"
+          echo "🏷️ To create a release, push a tag (v1.0.0) or use workflow_dispatch"
