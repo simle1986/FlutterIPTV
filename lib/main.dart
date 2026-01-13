@@ -21,6 +21,7 @@ import 'features/favorites/providers/favorites_provider.dart';
 import 'features/settings/providers/settings_provider.dart';
 import 'features/settings/providers/dlna_provider.dart';
 import 'features/epg/providers/epg_provider.dart';
+import 'features/multi_screen/providers/multi_screen_provider.dart';
 import 'core/widgets/window_title_bar.dart';
 
 void main() async {
@@ -68,6 +69,9 @@ void main() async {
     // Initialize critical services (Prefs) immediately for SettingsProvider
     // Database will be initialized in SplashScreen
     await ServiceLocator.initPrefs();
+    
+    // Initialize PlatformDetector for settings page
+    await PlatformDetector.init();
 
     // Set preferred orientations for mobile
     await SystemChrome.setPreferredOrientations([
@@ -141,6 +145,7 @@ class FlutterIPTVApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
         ChangeNotifierProvider(create: (_) => EpgProvider()),
         ChangeNotifierProvider(create: (_) => DlnaProvider()),
+        ChangeNotifierProvider(create: (_) => MultiScreenProvider()),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
@@ -211,19 +216,6 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
     debugPrint('DLNA: Provider 已初始化，回调已设置');
   }
   
-  /// 清除 DLNA 播放状态（播放器主动退出时调用）
-  void _clearDlnaPlayState() {
-    if (_currentDlnaUrl != null) {
-      _currentDlnaUrl = null;
-      try {
-        final dlnaProvider = context.read<DlnaProvider>();
-        dlnaProvider.notifyPlaybackStopped();
-      } catch (e) {
-        // 忽略错误
-      }
-    }
-  }
-
   void _handleDlnaPlay(String url, String? title) {
     // 如果已经在播放相同的 URL，不重复导航
     if (_currentDlnaUrl == url) {

@@ -26,6 +26,9 @@ class SettingsProvider extends ChangeNotifier {
   static const String _keyShowClock = 'show_clock';
   static const String _keyShowNetworkSpeed = 'show_network_speed';
   static const String _keyShowVideoInfo = 'show_video_info';
+  static const String _keyEnableMultiScreen = 'enable_multi_screen';
+  static const String _keyDefaultScreenPosition = 'default_screen_position';
+  static const String _keyActiveScreenIndex = 'active_screen_index';
 
   // Settings values
   String _themeMode = 'dark';
@@ -51,6 +54,9 @@ class SettingsProvider extends ChangeNotifier {
   bool _showClock = true; // 默认显示时间
   bool _showNetworkSpeed = true; // 默认显示网速
   bool _showVideoInfo = true; // 默认显示分辨率码率
+  bool _enableMultiScreen = true; // 默认开启分屏
+  int _defaultScreenPosition = 4; // 默认播放位置（右下角）
+  int _activeScreenIndex = 0; // 当前活动窗口索引
 
   // Getters
   String get themeMode => _themeMode;
@@ -75,6 +81,9 @@ class SettingsProvider extends ChangeNotifier {
   bool get showClock => _showClock;
   bool get showNetworkSpeed => _showNetworkSpeed;
   bool get showVideoInfo => _showVideoInfo;
+  bool get enableMultiScreen => _enableMultiScreen;
+  int get defaultScreenPosition => _defaultScreenPosition;
+  int get activeScreenIndex => _activeScreenIndex;
 
   SettingsProvider() {
     _loadSettings();
@@ -111,6 +120,9 @@ class SettingsProvider extends ChangeNotifier {
     _showClock = prefs.getBool(_keyShowClock) ?? true;
     _showNetworkSpeed = prefs.getBool(_keyShowNetworkSpeed) ?? true;
     _showVideoInfo = prefs.getBool(_keyShowVideoInfo) ?? true;
+    _enableMultiScreen = prefs.getBool(_keyEnableMultiScreen) ?? true;
+    _defaultScreenPosition = prefs.getInt(_keyDefaultScreenPosition) ?? 4;
+    _activeScreenIndex = prefs.getInt(_keyActiveScreenIndex) ?? 0;
     // 不在构造函数中调用 notifyListeners()，避免 build 期间触发重建
   }
 
@@ -152,6 +164,9 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool(_keyShowClock, _showClock);
     await prefs.setBool(_keyShowNetworkSpeed, _showNetworkSpeed);
     await prefs.setBool(_keyShowVideoInfo, _showVideoInfo);
+    await prefs.setBool(_keyEnableMultiScreen, _enableMultiScreen);
+    await prefs.setInt(_keyDefaultScreenPosition, _defaultScreenPosition);
+    await prefs.setInt(_keyActiveScreenIndex, _activeScreenIndex);
   }
 
   // Setters with persistence
@@ -299,6 +314,24 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setEnableMultiScreen(bool enabled) async {
+    _enableMultiScreen = enabled;
+    await _saveSettings();
+    notifyListeners();
+  }
+
+  Future<void> setDefaultScreenPosition(int position) async {
+    _defaultScreenPosition = position.clamp(1, 4);
+    await _saveSettings();
+    notifyListeners();
+  }
+
+  Future<void> setActiveScreenIndex(int index) async {
+    _activeScreenIndex = index.clamp(0, 3);
+    await _saveSettings();
+    notifyListeners();
+  }
+
   // Reset all settings to defaults
   Future<void> resetSettings() async {
     _themeMode = 'dark';
@@ -320,6 +353,9 @@ class SettingsProvider extends ChangeNotifier {
     _showClock = true;
     _showNetworkSpeed = true;
     _showVideoInfo = true;
+    _enableMultiScreen = true;
+    _defaultScreenPosition = 4;
+    _activeScreenIndex = 0;
 
     await _saveSettings();
     notifyListeners();

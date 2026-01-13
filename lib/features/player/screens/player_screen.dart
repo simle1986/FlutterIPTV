@@ -21,6 +21,8 @@ import '../../channels/providers/channel_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../../settings/providers/dlna_provider.dart';
 import '../../epg/providers/epg_provider.dart';
+import '../../multi_screen/providers/multi_screen_provider.dart';
+import '../../multi_screen/widgets/multi_screen_player.dart';
 
 class PlayerScreen extends StatefulWidget {
   final String channelUrl;
@@ -51,6 +53,12 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
 
   // 保存 provider 引用，用于 dispose 时释放资源
   PlayerProvider? _playerProvider;
+  
+  // 本地分屏模式状态（不影响设置）
+  bool _localMultiScreenMode = false;
+  
+  // 保存分屏模式状态，用于 dispose 时判断
+  bool _wasMultiScreenMode = false;
 
   // 手势控制相关变量
   double _gestureStartY = 0;
@@ -64,6 +72,11 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
 
   // 错误已显示标记，防止重复显示
   bool _errorShown = false;
+
+  // 检查是否处于分屏模式（使用本地状态）
+  bool _isMultiScreenMode() {
+    return _localMultiScreenMode && PlatformDetector.isDesktop;
+  }
 
   @override
   void initState() {
@@ -82,7 +95,19 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       _playerProvider = context.read<PlayerProvider>();
       _playerProvider!.addListener(_onProviderUpdate);
       _isLoading = _playerProvider!.isLoading;
+      
+      // 初始化本地分屏模式状态（根据设置）
+      final settingsProvider = context.read<SettingsProvider>();
+      _localMultiScreenMode = settingsProvider.enableMultiScreen && PlatformDetector.isDesktop;
+      
+      // 如果是分屏模式，设置音量增强到分屏Provider
+      if (_localMultiScreenMode) {
+        final multiScreenProvider = context.read<MultiScreenProvider>();
+        multiScreenProvider.setVolumeSettings(_playerProvider!.volume, settingsProvider.volumeBoost);
+      }
     }
+    // 保存分屏模式状态
+    _wasMultiScreenMode = _isMultiScreenMode();
   }
 
   void _onProviderUpdate() {
@@ -125,6 +150,13 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   }
 
   Future<void> _checkAndLaunchPlayer() async {
+    // 分屏模式下不启动PlayerProvider播放，由MultiScreenProvider处理
+    if (_isMultiScreenMode()) {
+      // 分屏模式：隐藏系统UI，但不启动PlayerProvider
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      return;
+    }
+    
     // Check if we should use native player on Android TV
     if (PlatformDetector.isTV && PlatformDetector.isAndroid) {
       final nativeAvailable = await NativePlayerChannel.isAvailable();
@@ -408,11 +440,13 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       WindowsPipChannel.exitPipMode();
     }
 
-    // Only stop playback if we're using Flutter player (not native)
-    if (!_usingNativePlayer && _playerProvider != null) {
+    // Only stop playback if we're using Flutter player (not native) and not in multi-screen mode
+    if (!_usingNativePlayer && _playerProvider != null && !_wasMultiScreenMode) {
       debugPrint('PlayerScreen: calling _playerProvider.stop()');
       _playerProvider!.removeListener(_onProviderUpdate);
       _playerProvider!.stop();
+    } else if (_playerProvider != null) {
+      _playerProvider!.removeListener(_onProviderUpdate);
     }
 
     // 重置亮度到系统默认
@@ -896,26 +930,27 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                 // Video Player
                 _buildVideoPlayer(),
 
-                // Controls Overlay - 迷你模式下使用简化版
-                AnimatedOpacity(
-                  opacity: _showControls ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 300),
-                  child: IgnorePointer(
-                    ignoring: !_showControls,
-                    child: WindowsPipChannel.isInPipMode
-                        ? _buildMiniControlsOverlay()
-                        : _buildControlsOverlay(),
+                // Controls Overlay - 分屏模式下不显示全局控制栏
+                if (!_isMultiScreenMode())
+                  AnimatedOpacity(
+                    opacity: _showControls ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: IgnorePointer(
+                      ignoring: !_showControls,
+                      child: WindowsPipChannel.isInPipMode
+                          ? _buildMiniControlsOverlay()
+                          : _buildControlsOverlay(),
+                    ),
                   ),
-                ),
 
-                // Category Panel (Left side) - 迷你模式下不显示
-                if (_showCategoryPanel && !WindowsPipChannel.isInPipMode) _buildCategoryPanel(),
+                // Category Panel (Left side) - 迷你模式和分屏模式下不显示
+                if (_showCategoryPanel && !WindowsPipChannel.isInPipMode && !_isMultiScreenMode()) _buildCategoryPanel(),
 
                 // 手势指示器 (手机端)
                 if (_showGestureIndicator) _buildGestureIndicator(),
 
-                // Loading Indicator - 使用本地状态
-                if (_isLoading)
+                // Loading Indicator - 分屏模式下不显示全局加载指示器
+                if (_isLoading && !_isMultiScreenMode())
                   Center(
                     child: Transform.scale(
                       scale: WindowsPipChannel.isInPipMode ? 0.6 : 1.0,
@@ -967,13 +1002,14 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                 ),
 
                 // Windows 播放器信息显示 - 右上角（网速、时间、FPS、分辨率）
+                // 分屏模式下不显示全局信息（每个分屏有自己的信息显示）
                 Builder(
                   builder: (context) {
                     final settings = context.watch<SettingsProvider>();
                     final player = context.watch<PlayerProvider>();
                     
-                    // 迷你模式或非播放状态不显示
-                    if (WindowsPipChannel.isInPipMode || player.state != PlayerState.playing) {
+                    // 分屏模式、迷你模式或非播放状态不显示
+                    if (_isMultiScreenMode() || WindowsPipChannel.isInPipMode || player.state != PlayerState.playing) {
                       return const SizedBox.shrink();
                     }
                     
@@ -1087,6 +1123,11 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   }
 
   Widget _buildVideoPlayer() {
+    // 使用本地状态判断是否显示分屏模式
+    if (_isMultiScreenMode()) {
+      return _buildMultiScreenPlayer();
+    }
+    
     return Consumer<PlayerProvider>(
       builder: (context, provider, _) {
         // Use ExoPlayer on Android phone
@@ -1129,6 +1170,65 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         );
       },
     );
+  }
+
+  // 分屏播放器
+  Widget _buildMultiScreenPlayer() {
+    return MultiScreenPlayer(
+      onExitMultiScreen: () {
+        // 退出分屏模式，使用活动屏幕的频道全屏播放（不修改设置）
+        final multiScreenProvider = context.read<MultiScreenProvider>();
+        final activeChannel = multiScreenProvider.activeChannel;
+        
+        // 暂停所有分屏播放器（但不清空频道，以便恢复时继续播放）
+        multiScreenProvider.pauseAllScreens();
+        
+        // 切换到常规模式
+        setState(() {
+          _localMultiScreenMode = false;
+        });
+        
+        if (activeChannel != null) {
+          // 使用主播放器播放活动频道
+          final playerProvider = context.read<PlayerProvider>();
+          playerProvider.playChannel(activeChannel);
+        }
+      },
+      onBack: () {
+        // 返回时清空所有分屏
+        final multiScreenProvider = context.read<MultiScreenProvider>();
+        multiScreenProvider.clearAllScreens();
+        Navigator.of(context).pop();
+      },
+    );
+  }
+  
+  // 切换到分屏模式
+  void _switchToMultiScreenMode() {
+    final playerProvider = context.read<PlayerProvider>();
+    final multiScreenProvider = context.read<MultiScreenProvider>();
+    final settingsProvider = context.read<SettingsProvider>();
+    final currentChannel = playerProvider.currentChannel;
+    
+    // 停止当前播放
+    playerProvider.stop();
+    
+    // 设置音量增强到分屏Provider
+    multiScreenProvider.setVolumeSettings(playerProvider.volume, settingsProvider.volumeBoost);
+    
+    // 切换到分屏模式
+    setState(() {
+      _localMultiScreenMode = true;
+    });
+    
+    // 如果分屏有记住的频道，恢复播放
+    if (multiScreenProvider.hasAnyChannel) {
+      multiScreenProvider.resumeAllScreens();
+    } else if (currentChannel != null) {
+      // 否则如果有当前频道，在默认位置播放
+      final defaultPosition = settingsProvider.defaultScreenPosition;
+      multiScreenProvider.playChannelAtDefaultPosition(currentChannel, defaultPosition);
+    }
   }
 
   // 迷你模式下的简化控件
@@ -1458,7 +1558,41 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
             _buildPipButton(),
           ],
 
+          // 分屏模式按钮 - 仅桌面平台
+          if (PlatformDetector.isDesktop) ...[
+            const SizedBox(width: 8),
+            _buildMultiScreenButton(),
+          ],
+
         ],
+      ),
+    );
+  }
+
+  // 分屏模式切换按钮
+  Widget _buildMultiScreenButton() {
+    return TVFocusable(
+      onSelect: _switchToMultiScreenMode,
+      focusScale: 1.0,
+      showFocusBorder: false,
+      builder: (context, isFocused, child) {
+        return Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isFocused ? AppTheme.primaryColor : const Color(0x33FFFFFF),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isFocused ? AppTheme.focusBorderColor : const Color(0x1AFFFFFF),
+              width: isFocused ? 2 : 1,
+            ),
+          ),
+          child: child,
+        );
+      },
+      child: const Icon(
+        Icons.grid_view_rounded,
+        color: Colors.white,
+        size: 18,
       ),
     );
   }

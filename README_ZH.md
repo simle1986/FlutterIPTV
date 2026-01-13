@@ -35,6 +35,7 @@ Lotus IPTV 是一款基于 Flutter 开发的现代化高性能 IPTV 播放器。
   <img src="assets/screenshots/player_screen.png" width="30%" alt="播放界面">
   <img src="assets/screenshots/fav_screen.png" width="30%" alt="收藏夹界面">
   <img src="assets/screenshots/setting_screen.png" width="30%" alt="设置界面">
+  <img src="assets/screenshots/s7.jpg" width="30%" alt="windows分屏播放界面">
 </p>
 
 ## ✨ 功能特性
@@ -72,6 +73,7 @@ Lotus IPTV 是一款基于 Flutter 开发的现代化高性能 IPTV 播放器。
 - 观看历史记录
 - 缺失台标时显示默认图标
 - **多源切换**: 同名频道自动合并，左右键切换源
+- **分屏模式** (桌面端): 2x2 分屏同时观看 4 个频道，独立 EPG 显示，支持迷你模式
 
 ### 📡 EPG 电子节目单
 - 支持 XMLTV 格式 EPG 数据

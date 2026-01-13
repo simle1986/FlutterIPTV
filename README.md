@@ -35,6 +35,7 @@ Lotus IPTV is a modern, high-performance IPTV player built with Flutter. Feature
   <img src="assets/screenshots/s3.jpg" width="30%" alt="Favorites Screen">
   <img src="assets/screenshots/s4.jpg" width="30%" alt="Setting Screen">
   <img src="assets/screenshots/s6.jpg" width="30%" alt="Playlist Manager">
+  <img src="assets/screenshots/s7.jpg" width="30%" alt="Multip Player Screen">
 </p>
 
 
@@ -121,6 +122,7 @@ Download the latest version from [Releases Page](https://github.com/shnulaa/Flut
 - Watch history tracking
 - Default channel logo for missing thumbnails
 - **Multi-source support**: Auto-merge channels with same name, switch sources with LEFT/RIGHT keys
+- **Multi-screen mode** (Desktop): 2x2 split screen for simultaneous viewing of 4 channels, with independent EPG display and mini mode support
 
 ### 📡 EPG (Electronic Program Guide)
 - Support for XMLTV format EPG data

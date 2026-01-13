@@ -19,6 +19,7 @@ import '../widgets/channel_test_dialog.dart';
 import '../../favorites/providers/favorites_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../../epg/providers/epg_provider.dart';
+import '../../multi_screen/providers/multi_screen_provider.dart';
 
 class ChannelsScreen extends StatefulWidget {
   final String? groupName;
@@ -535,21 +536,47 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                         },
                         onTest: () => _testSingleChannel(context, channel),
                         onTap: () {
-                          // 保存上次播放的频道ID
                           final settingsProvider = context.read<SettingsProvider>();
+                          
+                          // 保存上次播放的频道ID
                           if (settingsProvider.rememberLastChannel && channel.id != null) {
                             settingsProvider.setLastChannelId(channel.id);
                           }
 
-                          Navigator.pushNamed(
-                            context,
-                            AppRouter.player,
-                            arguments: {
-                              'channelUrl': channel.url,
-                              'channelName': channel.name,
-                              'channelLogo': channel.logoUrl,
-                            },
-                          );
+                          debugPrint('ChannelsScreen: onTap - enableMultiScreen=${settingsProvider.enableMultiScreen}, isDesktop=${PlatformDetector.isDesktop}');
+
+                          // 检查是否启用了分屏模式且在桌面平台
+                          if (settingsProvider.enableMultiScreen && PlatformDetector.isDesktop) {
+                            debugPrint('ChannelsScreen: Multi-screen mode, playing channel: ${channel.name}');
+                            // 分屏模式：在指定位置播放频道
+                            final multiScreenProvider = context.read<MultiScreenProvider>();
+                            final defaultPosition = settingsProvider.defaultScreenPosition;
+                            // 设置音量增强到分屏Provider
+                            multiScreenProvider.setVolumeSettings(1.0, settingsProvider.volumeBoost);
+                            multiScreenProvider.playChannelAtDefaultPosition(channel, defaultPosition);
+                            
+                            // 分屏模式下导航到播放器页面，但不传递频道参数（由MultiScreenProvider处理播放）
+                            Navigator.pushNamed(
+                              context,
+                              AppRouter.player,
+                              arguments: {
+                                'channelUrl': '', // 空URL表示分屏模式
+                                'channelName': '',
+                                'channelLogo': null,
+                              },
+                            );
+                          } else {
+                            // 普通模式：导航到播放器页面并传递频道参数
+                            Navigator.pushNamed(
+                              context,
+                              AppRouter.player,
+                              arguments: {
+                                'channelUrl': channel.url,
+                                'channelName': channel.name,
+                                'channelLogo': channel.logoUrl,
+                              },
+                            );
+                          }
                         },
                         onLongPress: () => _showChannelOptions(context, channel),
                       );

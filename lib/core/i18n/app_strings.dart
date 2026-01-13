@@ -230,6 +230,18 @@ class AppStrings {
   String get showVideoInfoSubtitle => _localizedValues['showVideoInfoSubtitle']!;
   String get videoInfoEnabled => _localizedValues['videoInfoEnabled']!;
   String get videoInfoDisabled => _localizedValues['videoInfoDisabled']!;
+  String get enableMultiScreen => _localizedValues['enableMultiScreen']!;
+  String get enableMultiScreenSubtitle => _localizedValues['enableMultiScreenSubtitle']!;
+  String get multiScreenEnabled => _localizedValues['multiScreenEnabled']!;
+  String get multiScreenDisabled => _localizedValues['multiScreenDisabled']!;
+  String get defaultScreenPosition => _localizedValues['defaultScreenPosition']!;
+  String get screenPosition1 => _localizedValues['screenPosition1']!;
+  String get screenPosition2 => _localizedValues['screenPosition2']!;
+  String get screenPosition3 => _localizedValues['screenPosition3']!;
+  String get screenPosition4 => _localizedValues['screenPosition4']!;
+  String get screenPositionDesc => _localizedValues['screenPositionDesc']!;
+  String get screenPositionSet => _localizedValues['screenPositionSet']!;
+  String get multiScreenMode => _localizedValues['multiScreenMode']!;
   String get notImplemented => _localizedValues['notImplemented']!;
   String get volumeNormalizationNotImplemented => _localizedValues['volumeNormalizationNotImplemented']!;
   String get autoRefreshNotImplemented => _localizedValues['autoRefreshNotImplemented']!;
@@ -509,6 +521,18 @@ class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {
     'showVideoInfoSubtitle': '在播放器右上角显示视频分辨率和码率',
     'videoInfoEnabled': '已启用分辨率显示',
     'videoInfoDisabled': '已关闭分辨率显示',
+    'enableMultiScreen': '多屏模式',
+    'enableMultiScreenSubtitle': '启用2x2分屏同时观看多个频道',
+    'multiScreenEnabled': '已启用多屏模式',
+    'multiScreenDisabled': '已关闭多屏模式',
+    'defaultScreenPosition': '默认播放位置',
+    'screenPosition1': '左上角 (1)',
+    'screenPosition2': '右上角 (2)',
+    'screenPosition3': '左下角 (3)',
+    'screenPosition4': '右下角 (4)',
+    'screenPositionDesc': '选择点击频道时默认使用的播放位置：',
+    'screenPositionSet': '默认播放位置已设置为：{position}',
+    'multiScreenMode': '多屏模式',
     'notImplemented': '(未实现)',
     'volumeNormalizationNotImplemented': '音量标准化尚未实现，设置不会生效',
     'autoRefreshNotImplemented': '自动刷新尚未实现，设置不会生效',
@@ -762,6 +786,18 @@ class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {
     'showVideoInfoSubtitle': 'Show video resolution and bitrate in top-right corner',
     'videoInfoEnabled': 'Resolution display enabled',
     'videoInfoDisabled': 'Resolution display disabled',
+    'enableMultiScreen': 'Multi-Screen Mode',
+    'enableMultiScreenSubtitle': 'Enable 2x2 split screen for simultaneous viewing',
+    'multiScreenEnabled': 'Multi-screen mode enabled',
+    'multiScreenDisabled': 'Multi-screen mode disabled',
+    'defaultScreenPosition': 'Default Screen Position',
+    'screenPosition1': 'Top Left (1)',
+    'screenPosition2': 'Top Right (2)',
+    'screenPosition3': 'Bottom Left (3)',
+    'screenPosition4': 'Bottom Right (4)',
+    'screenPositionDesc': 'Choose which screen position to use by default when clicking a channel:',
+    'screenPositionSet': 'Default screen position set to: {position}',
+    'multiScreenMode': 'Multi-Screen Mode',
     'notImplemented': '(Not implemented)',
     'volumeNormalizationNotImplemented': 'Volume normalization not implemented, setting will not take effect',
     'autoRefreshNotImplemented': 'Auto-refresh not implemented, setting will not take effect',

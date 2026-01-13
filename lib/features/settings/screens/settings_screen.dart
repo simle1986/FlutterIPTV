@@ -159,6 +159,31 @@ class SettingsScreen extends StatelessWidget {
                   _showSuccess(context, value ? (strings?.videoInfoEnabled ?? 'Resolution display enabled') : (strings?.videoInfoDisabled ?? 'Resolution display disabled'));
                 },
               ),
+              if (PlatformDetector.isDesktop) ...[
+                _buildDivider(),
+                _buildSwitchTile(
+                  context,
+                  title: AppStrings.of(context)?.enableMultiScreen ?? 'Multi-Screen Mode',
+                  subtitle: AppStrings.of(context)?.enableMultiScreenSubtitle ?? 'Enable 2x2 split screen for simultaneous viewing',
+                  icon: Icons.view_quilt_rounded,
+                  value: settings.enableMultiScreen,
+                  onChanged: (value) {
+                    settings.setEnableMultiScreen(value);
+                    final strings = AppStrings.of(context);
+                    _showSuccess(context, value ? (strings?.multiScreenEnabled ?? 'Multi-screen mode enabled') : (strings?.multiScreenDisabled ?? 'Multi-screen mode disabled'));
+                  },
+                ),
+                if (settings.enableMultiScreen) ...[
+                  _buildDivider(),
+                  _buildSelectTile(
+                    context,
+                    title: AppStrings.of(context)?.defaultScreenPosition ?? 'Default Screen Position',
+                    subtitle: _getScreenPositionLabel(context, settings.defaultScreenPosition),
+                    icon: Icons.crop_free_rounded,
+                    onTap: () => _showScreenPositionDialog(context, settings),
+                  ),
+                ],
+              ],
               _buildDivider(),
               _buildSwitchTile(
                 context,
@@ -1273,5 +1298,129 @@ class SettingsScreen extends StatelessWidget {
   // 检查更新
   void _checkForUpdates(BuildContext context) {
     ServiceLocator.updateManager.manualCheckForUpdate(context);
+  }
+
+  String _getScreenPositionLabel(BuildContext context, int position) {
+    final strings = AppStrings.of(context);
+    switch (position) {
+      case 1:
+        return strings?.screenPosition1 ?? 'Top Left (1)';
+      case 2:
+        return strings?.screenPosition2 ?? 'Top Right (2)';
+      case 3:
+        return strings?.screenPosition3 ?? 'Bottom Left (3)';
+      case 4:
+      default:
+        return strings?.screenPosition4 ?? 'Bottom Right (4)';
+    }
+  }
+
+  void _showScreenPositionDialog(BuildContext context, SettingsProvider settings) {
+    final options = [1, 2, 3, 4];
+    final strings = AppStrings.of(context);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppTheme.surfaceColor,
+          title: Text(
+            strings?.defaultScreenPosition ?? 'Default Screen Position',
+            style: const TextStyle(color: AppTheme.textPrimary),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                strings?.screenPositionDesc ?? 'Choose which screen position to use by default when clicking a channel:',
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              // 显示2x2网格示意图
+              Container(
+                width: 120,
+                height: 90,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppTheme.textMuted),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppTheme.textMuted.withOpacity(0.3)),
+                                color: settings.defaultScreenPosition == 1 ? AppTheme.primaryColor.withOpacity(0.3) : null,
+                              ),
+                              child: const Center(child: Text('1', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12))),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppTheme.textMuted.withOpacity(0.3)),
+                                color: settings.defaultScreenPosition == 2 ? AppTheme.primaryColor.withOpacity(0.3) : null,
+                              ),
+                              child: const Center(child: Text('2', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12))),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppTheme.textMuted.withOpacity(0.3)),
+                                color: settings.defaultScreenPosition == 3 ? AppTheme.primaryColor.withOpacity(0.3) : null,
+                              ),
+                              child: const Center(child: Text('3', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12))),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppTheme.textMuted.withOpacity(0.3)),
+                                color: settings.defaultScreenPosition == 4 ? AppTheme.primaryColor.withOpacity(0.3) : null,
+                              ),
+                              child: const Center(child: Text('4', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12))),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...options.map((position) {
+                return RadioListTile<int>(
+                  title: Text(
+                    _getScreenPositionLabel(context, position),
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  value: position,
+                  groupValue: settings.defaultScreenPosition,
+                  onChanged: (value) {
+                    if (value != null) {
+                      settings.setDefaultScreenPosition(value);
+                      Navigator.pop(dialogContext);
+                      final strings = AppStrings.of(context);
+                      _showSuccess(context, (strings?.screenPositionSet ?? 'Default screen position set to: {position}').replaceFirst('{position}', _getScreenPositionLabel(context, value)));
+                    }
+                  },
+                  activeColor: AppTheme.primaryColor,
+                );
+              }).toList(),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

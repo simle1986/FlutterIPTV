@@ -13,6 +13,7 @@ import '../../channels/providers/channel_provider.dart';
 import '../../favorites/providers/favorites_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../../epg/providers/epg_provider.dart';
+import '../../multi_screen/providers/multi_screen_provider.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -601,15 +602,30 @@ class _SearchScreenState extends State<SearchScreen> {
                     settingsProvider.setLastChannelId(channel.id);
                   }
 
-                  Navigator.pushNamed(
-                    context,
-                    AppRouter.player,
-                    arguments: {
-                      'channelUrl': channel.url,
-                      'channelName': channel.name,
-                      'channelLogo': channel.logoUrl,
-                    },
-                  );
+                  // 检查是否启用了分屏模式且在桌面平台
+                  if (settingsProvider.enableMultiScreen && PlatformDetector.isDesktop) {
+                    final multiScreenProvider = context.read<MultiScreenProvider>();
+                    final defaultPosition = settingsProvider.defaultScreenPosition;
+                    // 设置音量增强到分屏Provider
+                    multiScreenProvider.setVolumeSettings(1.0, settingsProvider.volumeBoost);
+                    multiScreenProvider.playChannelAtDefaultPosition(channel, defaultPosition);
+                    
+                    Navigator.pushNamed(context, AppRouter.player, arguments: {
+                      'channelUrl': '',
+                      'channelName': '',
+                      'channelLogo': null,
+                    });
+                  } else {
+                    Navigator.pushNamed(
+                      context,
+                      AppRouter.player,
+                      arguments: {
+                        'channelUrl': channel.url,
+                        'channelName': channel.name,
+                        'channelLogo': channel.logoUrl,
+                      },
+                    );
+                  }
                 },
               );
             },

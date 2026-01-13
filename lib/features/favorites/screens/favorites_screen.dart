@@ -9,6 +9,7 @@ import '../../../core/platform/platform_detector.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../providers/favorites_provider.dart';
 import '../../settings/providers/settings_provider.dart';
+import '../../multi_screen/providers/multi_screen_provider.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -22,6 +23,36 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   void initState() {
     super.initState();
     context.read<FavoritesProvider>().loadFavorites();
+  }
+
+  void _playChannel(dynamic channel) {
+    final settingsProvider = context.read<SettingsProvider>();
+    
+    // 保存上次播放的频道ID
+    if (settingsProvider.rememberLastChannel && channel.id != null) {
+      settingsProvider.setLastChannelId(channel.id);
+    }
+
+    // 检查是否启用了分屏模式且在桌面平台
+    if (settingsProvider.enableMultiScreen && PlatformDetector.isDesktop) {
+      final multiScreenProvider = context.read<MultiScreenProvider>();
+      final defaultPosition = settingsProvider.defaultScreenPosition;
+      // 设置音量增强到分屏Provider
+      multiScreenProvider.setVolumeSettings(1.0, settingsProvider.volumeBoost);
+      multiScreenProvider.playChannelAtDefaultPosition(channel, defaultPosition);
+      
+      Navigator.pushNamed(context, AppRouter.player, arguments: {
+        'channelUrl': '',
+        'channelName': '',
+        'channelLogo': null,
+      });
+    } else {
+      Navigator.pushNamed(context, AppRouter.player, arguments: {
+        'channelUrl': channel.url,
+        'channelName': channel.name,
+        'channelLogo': channel.logoUrl,
+      });
+    }
   }
 
   @override
@@ -184,23 +215,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget _buildFavoriteCard(FavoritesProvider provider, dynamic channel, int index) {
     return TVFocusable(
       autofocus: index == 0,
-      onSelect: () {
-        // 保存上次播放的频道ID
-        final settingsProvider = context.read<SettingsProvider>();
-        if (settingsProvider.rememberLastChannel && channel.id != null) {
-          settingsProvider.setLastChannelId(channel.id);
-        }
-
-        Navigator.pushNamed(
-          context,
-          AppRouter.player,
-          arguments: {
-            'channelUrl': channel.url,
-            'channelName': channel.name,
-            'channelLogo': channel.logoUrl,
-          },
-        );
-      },
+      onSelect: () => _playChannel(channel),
       focusScale: 1.02,
       showFocusBorder: false,
       builder: (context, isFocused, child) {
@@ -304,23 +319,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               children: [
                 // Play Button
                 TVFocusable(
-                  onSelect: () {
-                    // 保存上次播放的频道ID
-                    final settingsProvider = context.read<SettingsProvider>();
-                    if (settingsProvider.rememberLastChannel && channel.id != null) {
-                      settingsProvider.setLastChannelId(channel.id);
-                    }
-
-                    Navigator.pushNamed(
-                      context,
-                      AppRouter.player,
-                      arguments: {
-                        'channelUrl': channel.url,
-                        'channelName': channel.name,
-                        'channelLogo': channel.logoUrl,
-                      },
-                    );
-                  },
+                  onSelect: () => _playChannel(channel),
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
