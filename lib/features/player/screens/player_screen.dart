@@ -91,7 +91,8 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     // 保持屏幕常亮
     WakelockPlus.enable();
-    _checkAndLaunchPlayer();
+    // 延迟到 didChangeDependencies 之后再检查播放器
+    // 因为需要先初始化 _localMultiScreenMode
   }
 
   @override
@@ -119,10 +120,14 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       // DLNA 投屏模式下不进入分屏
       _localMultiScreenMode = !isDlnaMode && (widget.isMultiScreen || _settingsProvider!.enableMultiScreen) && PlatformDetector.isDesktop;
       
-      // 如果是分屏模式，设置音量增强到分屏Provider
-      if (_localMultiScreenMode) {
+      // 如果是分屏模式且分屏没有正在播放的频道，设置音量增强到分屏Provider
+      // 如果分屏已经有频道在播放（从首页继续播放进入），不要覆盖音量设置
+      if (_localMultiScreenMode && !_multiScreenProvider!.hasAnyChannel) {
         _multiScreenProvider!.setVolumeSettings(_playerProvider!.volume, _settingsProvider!.volumeBoost);
       }
+      
+      // 现在可以安全地检查和启动播放器了
+      _checkAndLaunchPlayer();
     }
     // 保存分屏模式状态
     _wasMultiScreenMode = _isMultiScreenMode();
@@ -1254,13 +1259,15 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
           playerProvider.playChannel(activeChannel);
         }
       },
-      onBack: () {
+      onBack: () async {
         // 先保存分屏状态，再清空
         _saveMultiScreenState();
-        // 返回时清空所有分屏
+        // 返回时清空所有分屏（等待完成）
         final multiScreenProvider = context.read<MultiScreenProvider>();
-        multiScreenProvider.clearAllScreens();
-        Navigator.of(context).pop();
+        await multiScreenProvider.clearAllScreens();
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
       },
     );
   }

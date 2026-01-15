@@ -216,7 +216,7 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
     debugPrint('DLNA: Provider 已初始化，回调已设置');
   }
   
-  void _handleDlnaPlay(String url, String? title) {
+  void _handleDlnaPlay(String url, String? title) async {
     // 如果已经在播放相同的 URL，不重复导航
     if (_currentDlnaUrl == url) {
       return;
@@ -227,9 +227,9 @@ class _DlnaAwareAppState extends State<_DlnaAwareApp> with WindowListener {
       final playerProvider = context.read<PlayerProvider>();
       playerProvider.stop();
       
-      // 停止分屏播放
+      // 停止分屏播放（等待完成）
       final multiScreenProvider = context.read<MultiScreenProvider>();
-      multiScreenProvider.clearAllScreens();
+      await multiScreenProvider.clearAllScreens();
     } catch (e) {
       debugPrint('DLNA: 停止当前播放失败 - $e');
     }

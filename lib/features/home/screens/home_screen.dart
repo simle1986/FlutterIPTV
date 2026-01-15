@@ -515,6 +515,11 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // 预先设置 MultiScreenProvider 的频道状态
       final multiScreenProvider = context.read<MultiScreenProvider>();
+      
+      // 设置音量增强（必须在播放之前设置）
+      multiScreenProvider.setVolumeSettings(1.0, settingsProvider.volumeBoost);
+      
+      // 设置活动屏幕（必须在播放之前设置）
       multiScreenProvider.setActiveScreen(activeIndex);
       
       // 恢复每个屏幕的频道（等待所有播放完成）
@@ -533,6 +538,12 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // 等待所有频道开始播放
       await Future.wait(futures);
+      
+      // 等待一小段时间确保所有播放器都已经开始播放
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // 所有频道加载完成后，重新应用音量设置确保只有活动屏幕有声音
+      await multiScreenProvider.reapplyVolumeToAllScreens();
       
       // 找到初始频道（用于路由参数）
       Channel? initialChannel;

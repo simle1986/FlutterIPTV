@@ -1,23 +1,23 @@
 {
-  "version": "1.2.0",
-  "build": 100,
-  "releaseDate": "2026-01-14",
+  "version": "1.2.1",
+  "build": 101,
+  "releaseDate": "2026-01-15",
   "assets": {
-    "windows": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.0/flutteriptv-Windows-x64-Setup.exe",
+    "windows": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.1/flutteriptv-Windows-x64-Setup.exe",
     "android_mobile": {
-      "arm64-v8a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.0/flutteriptv-Android-Mobile-arm64-v8a.apk",
-      "armeabi-v7a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.0/flutteriptv-Android-Mobile-armeabi-v7a.apk",
-      "x86_64": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.0/flutteriptv-Android-Mobile-x86_64.apk"
+      "arm64-v8a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.1/flutteriptv-Android-Mobile-arm64-v8a.apk",
+      "armeabi-v7a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.1/flutteriptv-Android-Mobile-armeabi-v7a.apk",
+      "x86_64": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.1/flutteriptv-Android-Mobile-x86_64.apk"
     },
     "android_tv": {
-      "arm64-v8a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.0/flutteriptv-AndroidTV-arm64-v8a.apk",
-      "armeabi-v7a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.0/flutteriptv-AndroidTV-armeabi-v7a.apk",
-      "x86_64": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.0/flutteriptv-AndroidTV-x86_64.apk"
+      "arm64-v8a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.1/flutteriptv-AndroidTV-arm64-v8a.apk",
+      "armeabi-v7a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.1/flutteriptv-AndroidTV-armeabi-v7a.apk",
+      "x86_64": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.1/flutteriptv-AndroidTV-x86_64.apk"
     }
   },
   "changelog": {
-    "zh": "- TV端新增2x2分屏功能，支持同时观看4个频道\n- 分屏支持频道选择、声音切换、状态保存\n- 首页继续播放支持恢复分屏状态\n- 修复双击OK收藏功能\n- DLNA投屏时自动停止本地播放",
-    "en": "- Added 2x2 split-screen for TV with 4 simultaneous channels\n- Split-screen supports channel selection, audio switching, state persistence\n- Continue playback from home supports multi-screen restore\n- Fixed double-click OK favorite function\n- DLNA casting now stops local playback automatically"
+    "zh": "- 修复Windows分屏继续播放音量问题\n- 修复分屏退出后播放器未正确停止的问题\n- 优化分屏状态保存和恢复逻辑",
+    "en": "- Fixed Windows multi-screen continue playback volume issue\n- Fixed player not stopping properly after exiting multi-screen\n- Optimized multi-screen state save and restore logic"
   },
   "minVersion": "1.0.0"
 }

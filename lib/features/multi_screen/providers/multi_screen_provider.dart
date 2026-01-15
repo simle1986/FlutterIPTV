@@ -24,10 +24,16 @@ class ScreenPlayerState {
   
   ScreenPlayerState();
   
-  void dispose() {
-    player?.dispose();
+  Future<void> dispose() async {
+    // 先停止播放，再释放资源
+    if (player != null) {
+      await player!.stop();
+      await player!.dispose();
+    }
     player = null;
     videoController = null;
+    channel = null;
+    isPlaying = false;
   }
 }
 
@@ -118,7 +124,7 @@ class MultiScreenProvider extends ChangeNotifier {
   Future<void> playChannelOnScreen(int screenIndex, Channel channel) async {
     if (screenIndex < 0 || screenIndex >= 4) return;
     
-    debugPrint('MultiScreenProvider: playChannelOnScreen - screenIndex=$screenIndex, channel=${channel.name}, url=${channel.url}');
+    debugPrint('MultiScreenProvider: playChannelOnScreen - screenIndex=$screenIndex, channel=${channel.name}, activeScreen=$_activeScreenIndex');
     
     final screen = _screens[screenIndex];
     
@@ -144,6 +150,10 @@ class MultiScreenProvider extends ChangeNotifier {
         screen.player!.stream.playing.listen((playing) {
           debugPrint('MultiScreenProvider: Screen $screenIndex playing=$playing');
           screen.isPlaying = playing;
+          // 播放开始后确保音量正确（使用当前的 _activeScreenIndex）
+          if (playing) {
+            _applyVolumeToScreen(screenIndex);
+          }
           notifyListeners();
         });
         
@@ -176,11 +186,14 @@ class MultiScreenProvider extends ChangeNotifier {
       }
       
       // 设置音量（只有活动屏幕有声音，使用有效音量包含音量增强）
-      screen.player!.setVolume(screenIndex == _activeScreenIndex ? _getEffectiveVolume() : 0);
+      _applyVolumeToScreen(screenIndex);
       
       // 播放频道
       debugPrint('MultiScreenProvider: Opening media for screen $screenIndex: ${channel.url}');
       await screen.player!.open(Media(channel.url));
+      
+      // 播放开始后再次确保音量正确
+      _applyVolumeToScreen(screenIndex);
       
       screen.isLoading = false;
       debugPrint('MultiScreenProvider: Screen $screenIndex started playing');
@@ -190,6 +203,29 @@ class MultiScreenProvider extends ChangeNotifier {
       screen.error = e.toString();
       screen.isLoading = false;
       notifyListeners();
+    }
+  }
+  
+  // 应用音量到指定屏幕
+  void _applyVolumeToScreen(int screenIndex) {
+    final screen = _screens[screenIndex];
+    if (screen.player != null) {
+      final targetVolume = screenIndex == _activeScreenIndex ? _getEffectiveVolume() : 0.0;
+      debugPrint('MultiScreenProvider: _applyVolumeToScreen - screen=$screenIndex, active=$_activeScreenIndex, volume=$targetVolume');
+      screen.player!.setVolume(targetVolume);
+    }
+  }
+  
+  // 重新应用音量到所有屏幕（用于恢复播放后确保音量正确）
+  Future<void> reapplyVolumeToAllScreens() async {
+    debugPrint('MultiScreenProvider: reapplyVolumeToAllScreens - activeScreen=$_activeScreenIndex');
+    for (int i = 0; i < 4; i++) {
+      _applyVolumeToScreen(i);
+    }
+    // 再次延迟应用，确保播放器完全就绪
+    await Future.delayed(const Duration(milliseconds: 200));
+    for (int i = 0; i < 4; i++) {
+      _applyVolumeToScreen(i);
     }
   }
 
@@ -215,9 +251,25 @@ class MultiScreenProvider extends ChangeNotifier {
   }
 
   // 清空所有屏幕
-  void clearAllScreens() {
+  Future<void> clearAllScreens() async {
+    debugPrint('MultiScreenProvider: clearAllScreens - stopping all players');
+    final futures = <Future>[];
     for (int i = 0; i < 4; i++) {
-      _screens[i].dispose();
+      final screen = _screens[i];
+      // 先停止播放
+      if (screen.player != null) {
+        debugPrint('MultiScreenProvider: Stopping player for screen $i');
+        // 设置音量为0确保没有声音
+        screen.player!.setVolume(0);
+        futures.add(screen.player!.stop());
+      }
+    }
+    // 等待所有播放器停止
+    await Future.wait(futures);
+    
+    // 再释放资源
+    for (int i = 0; i < 4; i++) {
+      await _screens[i].dispose();
       _screens[i] = ScreenPlayerState();
     }
     _activeScreenIndex = 0;
