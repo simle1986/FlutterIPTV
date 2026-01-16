@@ -881,6 +881,9 @@ class MultiScreenPlayerFragment : Fragment() {
         super.onResume()
         Log.d(TAG, "onResume")
         
+        // 确保屏幕常亮
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        
         // 恢复播放
         for (i in 0..3) {
             if (screenStates[i].channelIndex >= 0) {

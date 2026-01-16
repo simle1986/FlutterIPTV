@@ -248,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(color: AppTheme.getSurfaceColor(context), border: const Border(top: BorderSide(color: Color(0x1AFFFFFF), width: 1))),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(navItems.length, (index) {
@@ -257,9 +257,9 @@ class _HomeScreenState extends State<HomeScreen> {
               return GestureDetector(
                 onTap: () => _onNavItemTap(index),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(gradient: isSelected ? AppTheme.lotusGradient : null, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
-                  child: Icon(item.icon, color: isSelected ? Colors.white : AppTheme.getTextMuted(context), size: 24),
+                  child: Icon(item.icon, color: isSelected ? Colors.white : AppTheme.getTextMuted(context), size: 22),
                 ),
               );
             }),
@@ -575,13 +575,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeaderButton(IconData icon, String label, bool isPrimary, VoidCallback? onTap) {
+    final isMobile = PlatformDetector.isMobile;
     return TVFocusable(
       onSelect: onTap,
       focusScale: 1.0,
       showFocusBorder: false,
       builder: (context, isFocused, child) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 14, vertical: isMobile ? 6 : 8),
           decoration: BoxDecoration(
             gradient: isPrimary || isFocused ? AppTheme.lotusGradient : null,
             color: isPrimary || isFocused ? null : AppTheme.getGlassColor(context),
@@ -595,6 +596,10 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
           final textColor = isPrimary ? Colors.white : (isDark ? Colors.white : AppTheme.textPrimaryLight);
+          // 手机端只显示图标，节省空间
+          if (isMobile) {
+            return Icon(icon, color: textColor, size: 18);
+          }
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1068,8 +1073,22 @@ class _ChannelCardData {
 }
 
 /// 嵌入式频道页面（手机端底部导航用）
-class _EmbeddedChannelsScreen extends StatelessWidget {
+class _EmbeddedChannelsScreen extends StatefulWidget {
   const _EmbeddedChannelsScreen();
+
+  @override
+  State<_EmbeddedChannelsScreen> createState() => _EmbeddedChannelsScreenState();
+}
+
+class _EmbeddedChannelsScreenState extends State<_EmbeddedChannelsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // 每次显示时清除分类筛选
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChannelProvider>().clearGroupFilter();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -1,23 +1,23 @@
 {
-  "version": "1.2.4",
-  "build": 104,
+  "version": "1.2.5",
+  "build": 105,
   "releaseDate": "2026-01-16",
   "assets": {
-    "windows": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.4/flutteriptv-Windows-x64-Setup.exe",
+    "windows": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.5/flutteriptv-Windows-x64-Setup.exe",
     "android_mobile": {
-      "arm64-v8a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.4/flutteriptv-Android-Mobile-arm64-v8a.apk",
-      "armeabi-v7a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.4/flutteriptv-Android-Mobile-armeabi-v7a.apk",
-      "x86_64": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.4/flutteriptv-Android-Mobile-x86_64.apk"
+      "arm64-v8a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.5/flutteriptv-Android-Mobile-arm64-v8a.apk",
+      "armeabi-v7a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.5/flutteriptv-Android-Mobile-armeabi-v7a.apk",
+      "x86_64": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.5/flutteriptv-Android-Mobile-x86_64.apk"
     },
     "android_tv": {
-      "arm64-v8a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.4/flutteriptv-AndroidTV-arm64-v8a.apk",
-      "armeabi-v7a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.4/flutteriptv-AndroidTV-armeabi-v7a.apk",
-      "x86_64": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.4/flutteriptv-AndroidTV-x86_64.apk"
+      "arm64-v8a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.5/flutteriptv-AndroidTV-arm64-v8a.apk",
+      "armeabi-v7a": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.5/flutteriptv-AndroidTV-armeabi-v7a.apk",
+      "x86_64": "https://github.boki.moe/https://github.com/shnulaa/FlutterIPTV/releases/download/v1.2.5/flutteriptv-AndroidTV-x86_64.apk"
     }
   },
   "changelog": {
-    "zh": "- 手机端布局优化：卡片尺寸、分类菜单、底部导航栏\n- 所有页面共享底部导航栏\n- 卡片高度自动计算，不影响TV和Windows端",
-    "en": "- Mobile layout optimization: card size, category menu, bottom navigation\n- Shared bottom navigation bar across all pages\n- Auto-calculated card height without affecting TV and Windows"
+    "zh": "- 手机端布局优化：卡片尺寸、底部导航栏高度\n- 手机端播放时保持屏幕常亮\n- 修复频道页面分类筛选状态问题",
+    "en": "- Mobile layout optimization: card size, bottom nav height\n- Keep screen on during mobile playback\n- Fixed channel page category filter state issue"
   },
   "minVersion": "1.0.0"
 }

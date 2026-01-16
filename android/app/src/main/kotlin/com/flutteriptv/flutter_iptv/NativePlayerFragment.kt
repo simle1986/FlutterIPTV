@@ -1627,6 +1627,8 @@ class NativePlayerFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "onResume")
+        // 确保屏幕常亮
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         player?.playWhenReady = true
     }
 

@@ -56,7 +56,12 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     super.initState();
     _selectedGroup = widget.groupName;
 
-    if (_selectedGroup != null) {
+    // 嵌入模式下清除分类筛选，显示全部频道
+    if (widget.embedded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<ChannelProvider>().clearGroupFilter();
+      });
+    } else if (_selectedGroup != null) {
       context.read<ChannelProvider>().selectGroup(_selectedGroup!);
       
       // 如果是从首页"更多"按钮跳转过来的，延迟跳转焦点到第一个频道
@@ -609,14 +614,15 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             SliverAppBar(
               floating: true,
               backgroundColor: AppTheme.getBackgroundColor(context).withOpacity(0.95),
-              // 手机端显示菜单按钮打开分类抽屉
-              leading: PlatformDetector.isMobile
+              // 嵌入模式下不显示leading（使用浮动按钮代替）
+              leading: (PlatformDetector.isMobile && !widget.embedded)
                   ? IconButton(
                       icon: Icon(Icons.menu_rounded, color: AppTheme.getTextPrimary(context)),
                       onPressed: () => Scaffold.of(context).openDrawer(),
                     )
-                  : null,
-              title: Text(
+                  : (widget.embedded ? const SizedBox.shrink() : null),
+              // 嵌入模式下不显示标题（使用浮动按钮显示）
+              title: widget.embedded ? null : Text(
                 _selectedGroup ?? (AppStrings.of(context)?.allChannels ?? 'All Channels'),
                 style: TextStyle(
                   color: AppTheme.getTextPrimary(context),
